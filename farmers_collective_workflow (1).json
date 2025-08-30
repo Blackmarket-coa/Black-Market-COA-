@@ -1,0 +1,581 @@
+{
+  "name": "Farmers Collective - Main Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "collective-main",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "main-webhook-trigger",
+      "name": "Main API Gateway",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "collective-main-gateway"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Main orchestrator logic - route requests to appropriate sub-workflows\nconst request = $input.all()[0].json;\n\n// Validate request structure\nif (!request.action || !request.role || !request.userId) {\n  throw new Error('Invalid request structure. Required: action, role, userId');\n}\n\n// Log the request\nconsole.log('Main Orchestrator - Processing:', {\n  action: request.action,\n  role: request.role,\n  userId: request.userId,\n  timestamp: new Date().toISOString()\n});\n\n// Determine target sub-workflow based on action type\nlet targetWorkflow = '';\nlet webhookPath = '';\n\nswitch(request.action) {\n  case 'ai_schedule':\n  case 'crop_optimization':\n  case 'harvest_prediction':\n    targetWorkflow = 'AI Crop Planning';\n    webhookPath = 'ai-crop-planning';\n    break;\n    \n  case 'merchant_purchase':\n  case 'fee_payment':\n  case 'bulk_order':\n    targetWorkflow = 'Merchant Fees & Trading';\n    webhookPath = 'merchant-trading';\n    break;\n    \n  case 'mutual_aid_request':\n  case 'resource_sharing':\n  case 'skill_exchange':\n    targetWorkflow = 'Mutual Aid Network';\n    webhookPath = 'mutual-aid';\n    break;\n    \n  case 'wishlist_add':\n  case 'microinvest':\n  case 'tool_funding':\n  case 'investment_return':\n    targetWorkflow = 'Blockchain Microinvestment';\n    webhookPath = 'microinvestment';\n    break;\n    \n  case 'producer_register':\n  case 'producer_update':\n  case 'production_report':\n    targetWorkflow = 'Producer Management';\n    webhookPath = 'producer-mgmt';\n    break;\n    \n  default:\n    throw new Error(`Unknown action: ${request.action}`);\n}\n\n// Prepare routing information\nreturn [{\n  ...request,\n  routing: {\n    targetWorkflow,\n    webhookPath,\n    orchestratorId: 'main-orch-' + Date.now()\n  }\n}];"
+      },
+      "id": "orchestrator-logic",
+      "name": "Request Router & Logger",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "orchestrator_logs",
+        "columns": "request_id, action, role, user_id, target_workflow, status, created_at",
+        "additionalFields": {
+          "mode": "independently"
+        },
+        "options": {}
+      },
+      "id": "log-orchestrator-db",
+      "name": "Log to Orchestrator DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 400],
+      "credentials": {
+        "postgres": {
+          "id": "orchestrator-db-creds",
+          "name": "Orchestrator Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "ai-route-condition",
+              "leftValue": "={{ $json.routing.webhookPath }}",
+              "rightValue": "ai-crop-planning",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-ai-planning",
+      "name": "Route to AI Planning",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "merchant-route-condition",
+              "leftValue": "={{ $json.routing.webhookPath }}",
+              "rightValue": "merchant-trading",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-merchant",
+      "name": "Route to Merchant Trading",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 320]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "aid-route-condition",
+              "leftValue": "={{ $json.routing.webhookPath }}",
+              "rightValue": "mutual-aid",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-mutual-aid",
+      "name": "Route to Mutual Aid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 440]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "invest-route-condition",
+              "leftValue": "={{ $json.routing.webhookPath }}",
+              "rightValue": "microinvestment",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-microinvest",
+      "name": "Route to Microinvestment",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 560]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "producer-route-condition",
+              "leftValue": "={{ $json.routing.webhookPath }}",
+              "rightValue": "producer-mgmt",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-producer",
+      "name": "Route to Producer Mgmt",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 680]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://n8n.collective.local/webhook/ai-crop-planning",
+        "options": {
+          "headers": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Orchestrator-ID",
+                "value": "={{ $json.routing.orchestratorId }}"
+              }
+            ]
+          },
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "call-ai-planning",
+      "name": "Call AI Planning Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://n8n.collective.local/webhook/merchant-trading",
+        "options": {
+          "headers": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Orchestrator-ID",
+                "value": "={{ $json.routing.orchestratorId }}"
+              }
+            ]
+          },
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "call-merchant",
+      "name": "Call Merchant Trading Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 320]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://n8n.collective.local/webhook/mutual-aid",
+        "options": {
+          "headers": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Orchestrator-ID",
+                "value": "={{ $json.routing.orchestratorId }}"
+              }
+            ]
+          },
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "call-mutual-aid",
+      "name": "Call Mutual Aid Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 440]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://n8n.collective.local/webhook/microinvestment",
+        "options": {
+          "headers": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Orchestrator-ID",
+                "value": "={{ $json.routing.orchestratorId }}"
+              }
+            ]
+          },
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "call-microinvest",
+      "name": "Call Microinvestment Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 560]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://n8n.collective.local/webhook/producer-mgmt",
+        "options": {
+          "headers": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Orchestrator-ID",
+                "value": "={{ $json.routing.orchestratorId }}"
+              }
+            ]
+          },
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "call-producer",
+      "name": "Call Producer Mgmt Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 680]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate responses from sub-workflows\nconst responses = $input.all();\nconst mainResponse = responses[0].json;\n\n// Update orchestrator log with final status\nconst finalStatus = {\n  orchestratorId: mainResponse.routing?.orchestratorId,\n  status: 'completed',\n  subWorkflowResponse: mainResponse,\n  completedAt: new Date().toISOString()\n};\n\nconsole.log('Orchestrator - Request completed:', finalStatus);\n\nreturn [{\n  success: true,\n  message: 'Request processed successfully by orchestrator',\n  orchestratorId: finalStatus.orchestratorId,\n  subWorkflowResult: mainResponse,\n  timestamp: finalStatus.completedAt\n}];"
+      },
+      "id": "aggregate-responses",
+      "name": "Aggregate Sub-workflow Responses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": "orchestrator_logs",
+        "updateKey": "orchestrator_id",
+        "columns": "status, completed_at, response_data",
+        "additionalFields": {},
+        "options": {}
+      },
+      "id": "update-orchestrator-log",
+      "name": "Update Orchestrator Log",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1560, 400],
+      "credentials": {
+        "postgres": {
+          "id": "orchestrator-db-creds",
+          "name": "Orchestrator Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "final-response",
+      "name": "Return Final Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1780, 400]
+    }
+  ],
+  "connections": {
+    "Main API Gateway": {
+      "main": [
+        [
+          {
+            "node": "Request Router & Logger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Router & Logger": {
+      "main": [
+        [
+          {
+            "node": "Log to Orchestrator DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Orchestrator DB": {
+      "main": [
+        [
+          {
+            "node": "Route to AI Planning",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route to Merchant Trading",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route to Mutual Aid",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route to Microinvestment",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route to Producer Mgmt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to AI Planning": {
+      "main": [
+        [
+          {
+            "node": "Call AI Planning Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Merchant Trading": {
+      "main": [
+        [
+          {
+            "node": "Call Merchant Trading Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Mutual Aid": {
+      "main": [
+        [
+          {
+            "node": "Call Mutual Aid Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Microinvestment": {
+      "main": [
+        [
+          {
+            "node": "Call Microinvestment Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Producer Mgmt": {
+      "main": [
+        [
+          {
+            "node": "Call Producer Mgmt Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call AI Planning Workflow": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Sub-workflow Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Merchant Trading Workflow": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Sub-workflow Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Mutual Aid Workflow": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Sub-workflow Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Microinvestment Workflow": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Sub-workflow Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Producer Mgmt Workflow": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Sub-workflow Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Sub-workflow Responses": {
+      "main": [
+        [
+          {
+            "node": "Update Orchestrator Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Orchestrator Log": {
+      "main": [
+        [
+          {
+            "node": "Return Final Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "id": "main-orchestrator",
+      "name": "Main Orchestrator"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-01T00:00:00.000Z",
+  "versionId": "1"
+}

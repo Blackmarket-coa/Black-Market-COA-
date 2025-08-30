@@ -1,0 +1,267 @@
+{
+  "name": "AI Crop Planning Sub-Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-crop-planning",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "prepare-final-response",
+      "name": "Prepare Final Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "ai-planning-response",
+      "name": "AI Planning Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 300]
+    }
+  ],
+  "connections": {
+    "AI Planning Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Planning Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Planning Logic": {
+      "main": [
+        [
+          {
+            "node": "Log AI Request to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log AI Request to DB": {
+      "main": [
+        [
+          {
+            "node": "Generate AI Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate AI Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Process AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process AI Response": {
+      "main": [
+        [
+          {
+            "node": "Save Crop Plan to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Crop Plan to DB": {
+      "main": [
+        [
+          {
+            "node": "Check for Tool Investment Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Tool Investment Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Prepare Final Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Final Response": {
+      "main": [
+        [
+          {
+            "node": "AI Planning Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "id": "ai-crop-planning",
+      "name": "AI Crop Planning"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-01T00:00:00.000Z",
+  "versionId": "1"
+},
+      "id": "ai-planning-webhook",
+      "name": "AI Planning Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "ai-crop-planning-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// AI Crop Planning Logic\nconst request = $input.all()[0].json;\n\n// Validate AI planning specific requests\nif (!request.data || !request.data.crop_type) {\n  throw new Error('AI Planning requires crop_type in data');\n}\n\n// Extract planning parameters\nconst planningParams = {\n  cropType: request.data.crop_type,\n  season: request.data.season || 'current',\n  location: request.data.location || 'unknown',\n  plotSize: request.data.plot_size || '100_sq_ft',\n  soilType: request.data.soil_type || 'mixed',\n  userId: request.userId,\n  orchestratorId: request.routing?.orchestratorId\n};\n\n// Prepare AI prompt based on action type\nlet aiPrompt = '';\nswitch(request.action) {\n  case 'ai_schedule':\n    aiPrompt = `Create a detailed planting and harvest schedule for ${planningParams.cropType} in ${planningParams.season} season. Location: ${planningParams.location}. Plot size: ${planningParams.plotSize}. Include: optimal planting dates, growth milestones, care instructions, harvest timeline, and expected yield.`;\n    break;\n  case 'crop_optimization':\n    aiPrompt = `Optimize growing conditions for ${planningParams.cropType} in ${planningParams.location}. Soil type: ${planningParams.soilType}. Provide specific recommendations for: soil preparation, spacing, companion planting, pest management, and yield maximization techniques.`;\n    break;\n  case 'harvest_prediction':\n    aiPrompt = `Predict harvest timing and yield for ${planningParams.cropType} planted in ${planningParams.season}. Consider location: ${planningParams.location} and plot size: ${planningParams.plotSize}. Include harvest windows, quality indicators, and storage recommendations.`;\n    break;\n  default:\n    aiPrompt = `General agricultural advice for ${planningParams.cropType} cultivation.`;\n}\n\nconsole.log('AI Planning - Processing:', planningParams);\n\nreturn [{\n  ...request,\n  aiPrompt,\n  planningParams\n}];"
+      },
+      "id": "ai-planning-logic",
+      "name": "AI Planning Logic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "ai_planning_requests",
+        "columns": "user_id, orchestrator_id, crop_type, season, location, action_type, ai_prompt, status, created_at",
+        "additionalFields": {
+          "mode": "independently"
+        },
+        "options": {}
+      },
+      "id": "log-ai-request",
+      "name": "Log AI Request to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "ai-planning-db-creds",
+          "name": "AI Planning Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium",
+        "options": {
+          "headers": {
+            "entries": [
+              {
+                "name": "Authorization",
+                "value": "Bearer hf_placeholder_token_here"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "timeout": 45000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"inputs\": \"{{ $json.aiPrompt }}\",\n  \"parameters\": {\n    \"max_length\": 800,\n    \"temperature\": 0.7,\n    \"top_p\": 0.9,\n    \"do_sample\": true\n  }\n}"
+      },
+      "id": "call-ai-service",
+      "name": "Generate AI Recommendations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process AI response and structure for database storage\nconst aiResponse = $input.all()[0].json;\nconst originalRequest = $('AI Planning Logic').item.json;\n\n// Extract AI recommendations\nlet recommendations = '';\nif (aiResponse.generated_text) {\n  recommendations = aiResponse.generated_text;\n} else if (aiResponse[0] && aiResponse[0].generated_text) {\n  recommendations = aiResponse[0].generated_text;\n} else {\n  recommendations = 'AI service unavailable - using fallback recommendations';\n}\n\n// Structure the planning result\nconst planningResult = {\n  userId: originalRequest.userId,\n  orchestratorId: originalRequest.orchestratorId,\n  cropType: originalRequest.planningParams.cropType,\n  season: originalRequest.planningParams.season,\n  location: originalRequest.planningParams.location,\n  actionType: originalRequest.action,\n  aiRecommendations: recommendations,\n  confidence: aiResponse.confidence || 0.8,\n  generatedAt: new Date().toISOString(),\n  status: 'completed'\n};\n\n// Calculate estimated planting/harvest dates based on crop type\nconst today = new Date();\nconst plantingDate = new Date(today.getTime() + (7 * 24 * 60 * 60 * 1000)); // 1 week from now\nlet harvestDate = new Date(plantingDate);\n\n// Basic harvest timing by crop type (days to harvest)\nconst cropTimings = {\n  'tomatoes': 80,\n  'lettuce': 45,\n  'carrots': 70,\n  'beans': 60,\n  'corn': 100,\n  'peppers': 85,\n  'squash': 95\n};\n\nconst daysToHarvest = cropTimings[originalRequest.planningParams.cropType.toLowerCase()] || 75;\nharvestDate.setDate(plantingDate.getDate() + daysToHarvest);\n\nplanningResult.estimatedPlantingDate = plantingDate.toISOString().split('T')[0];\nplanningResult.estimatedHarvestDate = harvestDate.toISOString().split('T')[0];\n\nconsole.log('AI Planning Result:', planningResult);\n\nreturn [planningResult];"
+      },
+      "id": "process-ai-response",
+      "name": "Process AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "crop_plans",
+        "columns": "user_id, orchestrator_id, crop_type, season, location, action_type, ai_recommendations, estimated_planting_date, estimated_harvest_date, confidence_score, status, created_at",
+        "additionalFields": {
+          "mode": "independently"
+        },
+        "options": {}
+      },
+      "id": "save-crop-plan",
+      "name": "Save Crop Plan to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 300],
+      "credentials": {
+        "postgres": {
+          "id": "ai-planning-db-creds",
+          "name": "AI Planning Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://n8n.collective.local/webhook/microinvestment",
+        "options": {
+          "headers": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Source-Workflow",
+                "value": "ai-crop-planning"
+              }
+            ]
+          },
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"action\": \"check_tool_needs\",\n  \"role\": \"system\",\n  \"userId\": \"{{ $json.userId }}\",\n  \"data\": {\n    \"crop_type\": \"{{ $json.cropType }}\",\n    \"season\": \"{{ $json.season }}\",\n    \"plot_size\": \"{{ $('AI Planning Logic').item.json.planningParams.plotSize }}\",\n    \"recommendations\": \"{{ $json.aiRecommendations }}\",\n    \"check_type\": \"tool_optimization\"\n  }\n}"
+      },
+      "id": "check-tool-needs",
+      "name": "Check for Tool Investment Opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare final response for orchestrator\nconst cropPlan = $('Process AI Response').item.json;\nconst toolCheck = $input.all()[0].json;\n\nconst finalResponse = {\n  success: true,\n  workflowType: 'ai-crop-planning',\n  result: {\n    cropPlan: {\n      cropType: cropPlan.cropType,\n      season: cropPlan.season,\n      location: cropPlan.location,\n      estimatedPlantingDate: cropPlan.estimatedPlantingDate,\n      estimatedHarvestDate: cropPlan.estimatedHarvestDate,\n      aiRecommendations: cropPlan.aiRecommendations,\n      confidence: cropPlan.confidence\n    },\n    toolInvestmentOpportunities: toolCheck.success ? toolCheck.recommendations : [],\n    nextSteps: [\n      'Review AI recommendations',\n      'Check microinvestment opportunities',\n      'Schedule planting activities',\n      'Set harvest reminders'\n    ]\n  },\n  timestamp: new Date().toISOString(),\n  orchestratorId: cropPlan.orchestratorId\n};\n\nconsole.log('AI Planning - Final Response:', finalResponse);\n\nreturn [finalResponse];"

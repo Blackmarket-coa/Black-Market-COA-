@@ -1,0 +1,599 @@
+{
+  "name": "Blockchain Microinvestment Sub-Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "microinvestment",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "microinvest-webhook",
+      "name": "Microinvestment Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "microinvestment-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Microinvestment Logic Router\nconst request = $input.all()[0].json;\n\n// Validate microinvestment request\nif (!request.action || !request.userId) {\n  throw new Error('Microinvestment requires action and userId');\n}\n\n// Route different microinvestment actions\nconst microinvestAction = {\n  action: request.action,\n  userId: request.userId,\n  orchestratorId: request.routing?.orchestratorId || request.orchestratorId,\n  data: request.data || {},\n  timestamp: new Date().toISOString()\n};\n\nswitch(request.action) {\n  case 'wishlist_add':\n    microinvestAction.actionType = 'wishlist_management';\n    microinvestAction.operation = 'add_tool';\n    break;\n  case 'microinvest':\n    microinvestAction.actionType = 'investment_processing';\n    microinvestAction.operation = 'process_investment';\n    break;\n  case 'tool_funding':\n    microinvestAction.actionType = 'funding_management';\n    microinvestAction.operation = 'fund_tool';\n    break;\n  case 'investment_return':\n    microinvestAction.actionType = 'return_processing';\n    microinvestAction.operation = 'calculate_returns';\n    break;\n  case 'check_tool_needs':\n    microinvestAction.actionType = 'tool_analysis';\n    microinvestAction.operation = 'analyze_needs';\n    break;\n  default:\n    throw new Error(`Unknown microinvestment action: ${request.action}`);\n}\n\nconsole.log('Microinvestment - Processing:', microinvestAction);\n\nreturn [microinvestAction];"
+      },
+      "id": "microinvest-router",
+      "name": "Microinvestment Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "microinvestment_logs",
+        "columns": "user_id, orchestrator_id, action_type, operation, request_data, status, created_at",
+        "additionalFields": {
+          "mode": "independently"
+        },
+        "options": {}
+      },
+      "id": "log-microinvest-request",
+      "name": "Log Microinvest Request",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 400],
+      "credentials": {
+        "postgres": {
+          "id": "microinvestment-db-creds",
+          "name": "Microinvestment Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "wishlist-condition",
+              "leftValue": "={{ $json.actionType }}",
+              "rightValue": "wishlist_management",
+              "operator": {
+        "Microinvestment Webhook": {
+      "main": [
+        [
+          {
+            "node": "Microinvestment Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Microinvestment Router": {
+      "main": [
+        [
+          {
+            "node": "Log Microinvest Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Microinvest Request": {
+      "main": [
+        [
+          {
+            "node": "Route Wishlist Management",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route Investment Processing",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route Return Processing",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route Tool Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Wishlist Management": {
+      "main": [
+        [
+          {
+            "node": "Process Wishlist Addition",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Investment Processing": {
+      "main": [
+        [
+          {
+            "node": "Process Investment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Return Processing": {
+      "main": [
+        [
+          {
+            "node": "Process Return Calculation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Tool Analysis": {
+      "main": [
+        [
+          {
+            "node": "Analyze Tool Needs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Wishlist Addition": {
+      "main": [
+        [
+          {
+            "node": "Save to Wishlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Wishlist": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Microinvestment Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Investment": {
+      "main": [
+        [
+          {
+            "node": "Process Blockchain Investment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Blockchain Investment": {
+      "main": [
+        [
+          {
+            "node": "Finalize Investment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize Investment": {
+      "main": [
+        [
+          {
+            "node": "Record Investment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Investment": {
+      "main": [
+        [
+          {
+            "node": "Update Wishlist Funding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Wishlist Funding": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Microinvestment Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Return Calculation": {
+      "main": [
+        [
+          {
+            "node": "Get Investors for Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Investors for Item": {
+      "main": [
+        [
+          {
+            "node": "Calculate Proportional Returns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Proportional Returns": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Microinvestment Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Tool Needs": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Microinvestment Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Microinvestment Results": {
+      "main": [
+        [
+          {
+            "node": "Microinvestment Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "id": "blockchain-microinvestment",
+      "name": "Blockchain Microinvestment"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-01T00:00:00.000Z",
+  "versionId": "1"
+} "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-wishlist",
+      "name": "Route Wishlist Management",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "investment-condition",
+              "leftValue": "={{ $json.actionType }}",
+              "rightValue": "investment_processing",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-investment",
+      "name": "Route Investment Processing",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 340]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "return-condition",
+              "leftValue": "={{ $json.actionType }}",
+              "rightValue": "return_processing",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-returns",
+      "name": "Route Return Processing",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "analysis-condition",
+              "leftValue": "={{ $json.actionType }}",
+              "rightValue": "tool_analysis",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-tool-analysis",
+      "name": "Route Tool Analysis",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 620]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Wishlist Management Logic\nconst request = $input.all()[0].json;\nconst data = request.data;\n\n// Validate wishlist data\nif (!data.tool_name || !data.estimated_cost) {\n  throw new Error('Wishlist requires tool_name and estimated_cost');\n}\n\n// Structure wishlist item\nconst wishlistItem = {\n  userId: request.userId,\n  toolName: data.tool_name,\n  toolCategory: data.tool_category || 'general',\n  description: data.description || '',\n  estimatedCost: parseFloat(data.estimated_cost),\n  priority: data.priority || 'medium',\n  expectedProductionIncrease: data.expected_increase || '10%',\n  fundingGoal: parseFloat(data.estimated_cost),\n  currentFunding: 0,\n  status: 'open_for_investment',\n  createdAt: new Date().toISOString()\n};\n\n// Calculate potential ROI for investors\nconst baseProductionValue = data.current_production_value || 1000;\nconst increasePercent = parseFloat(wishlistItem.expectedProductionIncrease.replace('%', '')) / 100;\nconst annualIncrease = baseProductionValue * increasePercent;\nconst estimatedROI = ((annualIncrease / wishlistItem.estimatedCost) * 100).toFixed(2);\n\nwishlistItem.estimatedAnnualROI = `${estimatedROI}%`;\nwishlistItem.paybackPeriod = Math.ceil(wishlistItem.estimatedCost / annualIncrease);\n\nconsole.log('Wishlist Item:', wishlistItem);\n\nreturn [wishlistItem];"
+      },
+      "id": "process-wishlist",
+      "name": "Process Wishlist Addition",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "producer_wishlist",
+        "columns": "user_id, tool_name, tool_category, description, estimated_cost, priority, expected_production_increase, funding_goal, current_funding, estimated_annual_roi, payback_period_months, status, created_at",
+        "additionalFields": {
+          "mode": "independently"
+        },
+        "options": {}
+      },
+      "id": "save-wishlist-item",
+      "name": "Save to Wishlist",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 200],
+      "credentials": {
+        "postgres": {
+          "id": "microinvestment-db-creds",
+          "name": "Microinvestment Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Investment Processing Logic\nconst request = $input.all()[0].json;\nconst data = request.data;\n\n// Validate investment data\nif (!data.wishlist_item_id || !data.investment_amount) {\n  throw new Error('Investment requires wishlist_item_id and investment_amount');\n}\n\nconst investmentData = {\n  investorId: request.userId,\n  wishlistItemId: data.wishlist_item_id,\n  investmentAmount: parseFloat(data.investment_amount),\n  tokenType: data.token_type || 'COLLECTIVE',\n  walletAddress: data.wallet_address,\n  transactionHash: '', // Will be filled by blockchain call\n  investmentDate: new Date().toISOString(),\n  status: 'processing'\n};\n\nconsole.log('Processing Investment:', investmentData);\n\nreturn [investmentData];"
+      },
+      "id": "process-investment",
+      "name": "Process Investment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 340]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.polygon.io/v1/transactions",
+        "options": {
+          "headers": {
+            "entries": [
+              {
+                "name": "Authorization",
+                "value": "Bearer POLYGON_API_KEY_PLACEHOLDER"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"from\": \"{{ $json.walletAddress }}\",\n  \"to\": \"0xCOLLECTIVE_INVESTMENT_WALLET_PLACEHOLDER\",\n  \"amount\": \"{{ $json.investmentAmount }}\",\n  \"token\": \"{{ $json.tokenType }}\",\n  \"memo\": \"Microinvestment for wishlist item {{ $json.wishlistItemId }}\",\n  \"gas_limit\": \"21000\"\n}"
+      },
+      "id": "blockchain-investment",
+      "name": "Process Blockchain Investment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 340]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Update investment with blockchain transaction\nconst investmentData = $('Process Investment').item.json;\nconst blockchainResult = $input.all()[0].json;\n\n// Extract transaction hash from blockchain response\nconst transactionHash = blockchainResult.transaction_hash || blockchainResult.txHash || 'pending';\n\nconst completedInvestment = {\n  ...investmentData,\n  transactionHash,\n  blockchainStatus: blockchainResult.status || 'confirmed',\n  status: 'completed',\n  completedAt: new Date().toISOString()\n};\n\nconsole.log('Investment Completed:', completedInvestment);\n\nreturn [completedInvestment];"
+      },
+      "id": "finalize-investment",
+      "name": "Finalize Investment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 340]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "microinvestments",
+        "columns": "investor_id, wishlist_item_id, investment_amount, token_type, wallet_address, transaction_hash, blockchain_status, status, investment_date, completed_at",
+        "additionalFields": {
+          "mode": "independently"
+        },
+        "options": {}
+      },
+      "id": "record-investment",
+      "name": "Record Investment",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1780, 340],
+      "credentials": {
+        "postgres": {
+          "id": "microinvestment-db-creds",
+          "name": "Microinvestment Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE producer_wishlist SET current_funding = current_funding + {{ $('Finalize Investment').item.json.investmentAmount }}, updated_at = NOW() WHERE id = {{ $('Finalize Investment').item.json.wishlistItemId }} RETURNING *",
+        "options": {}
+      },
+      "id": "update-wishlist-funding",
+      "name": "Update Wishlist Funding",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2000, 340],
+      "credentials": {
+        "postgres": {
+          "id": "microinvestment-db-creds",
+          "name": "Microinvestment Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Return Processing Logic - Calculate proportional returns\nconst request = $input.all()[0].json;\nconst data = request.data;\n\n// Validate return data\nif (!data.wishlist_item_id || !data.production_increase_amount) {\n  throw new Error('Return processing requires wishlist_item_id and production_increase_amount');\n}\n\nconst returnData = {\n  wishlistItemId: data.wishlist_item_id,\n  productionIncreaseAmount: parseFloat(data.production_increase_amount),\n  reportingPeriod: data.reporting_period || 'monthly',\n  reportedBy: request.userId,\n  reportDate: new Date().toISOString()\n};\n\nconsole.log('Processing Returns for:', returnData);\n\nreturn [returnData];"
+      },
+      "id": "process-returns",
+      "name": "Process Return Calculation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 480]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",\n        "query": "SELECT mi.*, pw.tool_name, pw.funding_goal FROM microinvestments mi JOIN producer_wishlist pw ON mi.wishlist_item_id = pw.id WHERE mi.wishlist_item_id = {{ $json.wishlistItemId }} AND mi.status = 'completed'",
+        "options": {}
+      },
+      "id": "get-investors",
+      "name": "Get Investors for Item",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 480],
+      "credentials": {
+        "postgres": {
+          "id": "microinvestment-db-creds",
+          "name": "Microinvestment Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate proportional returns for each investor\nconst returnData = $('Process Return Calculation').item.json;\nconst investors = $input.all();\n\nif (!investors || investors.length === 0) {\n  throw new Error('No investors found for this wishlist item');\n}\n\n// Calculate total investment and individual returns\nlet totalInvestment = 0;\ninvestors.forEach(inv => {\n  totalInvestment += parseFloat(inv.json.investment_amount);\n});\n\nconst individualReturns = investors.map(inv => {\n  const investmentAmount = parseFloat(inv.json.investment_amount);\n  const investmentShare = investmentAmount / totalInvestment;\n  const returnAmount = returnData.productionIncreaseAmount * investmentShare;\n  \n  return {\n    investorId: inv.json.investor_id,\n    investmentAmount,\n    investmentShare: (investmentShare * 100).toFixed(2) + '%',\n    returnAmount: returnAmount.toFixed(2),\n    tokenType: inv.json.token_type,\n    transactionId: inv.json.id\n  };\n});\n\nconst returnSummary = {\n  wishlistItemId: returnData.wishlistItemId,\n  totalProductionIncrease: returnData.productionIncreaseAmount,\n  totalInvestment,\n  reportingPeriod: returnData.reportingPeriod,\n  individualReturns,\n  distributionDate: new Date().toISOString()\n};\n\nconsole.log('Return Distribution:', returnSummary);\n\nreturn [returnSummary];"
+      },
+      "id": "calculate-proportional-returns",
+      "name": "Calculate Proportional Returns",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tool Analysis Logic - Analyze crop recommendations for tool needs\nconst request = $input.all()[0].json;\nconst data = request.data;\n\n// Analyze AI recommendations for tool suggestions\nconst recommendations = data.recommendations || '';\nconst cropType = data.crop_type || '';\nconst plotSize = data.plot_size || '';\n\n// Tool recommendation engine based on crop and recommendations\nconst toolSuggestions = [];\n\n// Basic tool analysis based on crop type and plot size\nif (cropType.toLowerCase().includes('tomato') || cropType.toLowerCase().includes('pepper')) {\n  toolSuggestions.push({\n    toolName: 'Greenhouse Kit',\n    category: 'infrastructure',\n    estimatedCost: 800,\n    expectedIncrease: '40%',\n    priority: 'high',\n    reason: 'Extends growing season and protects from weather'\n  });\n  \n  toolSuggestions.push({\n    toolName: 'Drip Irrigation System',\n    category: 'automation',\n    estimatedCost: 200,\n    expectedIncrease: '15%',\n    priority: 'medium',\n    reason: 'Improves water efficiency and plant health'\n  });\n}\n\nif (plotSize.includes('100') || recommendations.includes('larger')) {\n  toolSuggestions.push({\n    toolName: 'Raised Garden Bed Kit',\n    category: 'infrastructure',\n    estimatedCost: 150,\n    expectedIncrease: '20%',\n    priority: 'medium',\n    reason: 'Better soil control and drainage'\n  });\n}\n\nif (recommendations.includes('pest') || recommendations.includes('organic')) {\n  toolSuggestions.push({\n    toolName: 'Organic Pest Control Kit',\n    category: 'supplies',\n    estimatedCost: 75,\n    expectedIncrease: '10%',\n    priority: 'low',\n    reason: 'Protects crops without harmful chemicals'\n  });\n}\n\nconst analysisResult = {\n  userId: request.userId,\n  cropType,\n  plotSize,\n  analysisDate: new Date().toISOString(),\n  toolSuggestions,\n  totalPotentialInvestment: toolSuggestions.reduce((sum, tool) => sum + tool.estimatedCost, 0),\n  maxExpectedIncrease: Math.max(...toolSuggestions.map(t => parseFloat(t.expectedIncrease.replace('%', ''))))\n};\n\nconsole.log('Tool Analysis Result:', analysisResult);\n\nreturn [analysisResult];"
+      },
+      "id": "analyze-tool-needs",
+      "name": "Analyze Tool Needs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 620]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all microinvestment results\nconst inputs = $input.all();\nlet result = {};\n\n// Determine which path was taken and format response accordingly\nif ($('Process Wishlist Addition').item) {\n  const wishlistItem = $('Save to Wishlist').item.json;\n  result = {\n    success: true,\n    workflowType: 'microinvestment-wishlist',\n    result: {\n      action: 'wishlist_added',\n      toolName: wishlistItem.tool_name,\n      estimatedCost: wishlistItem.estimated_cost,\n      fundingGoal: wishlistItem.funding_goal,\n      estimatedROI: wishlistItem.estimated_annual_roi\n    }\n  };\n} else if ($('Record Investment').item) {\n  const investment = $('Update Wishlist Funding').item.json;\n  result = {\n    success: true,\n    workflowType: 'microinvestment-investment',\n    result: {\n      action: 'investment_processed',\n      investmentAmount: investment.current_funding,\n      transactionHash: $('Finalize Investment').item.json.transactionHash\n    }\n  };\n} else if ($('Calculate Proportional Returns').item) {\n  const returns = $('Calculate Proportional Returns').item.json;\n  result = {\n    success: true,\n    workflowType: 'microinvestment-returns',\n    result: {\n      action: 'returns_calculated',\n      totalReturns: returns.totalProductionIncrease,\n      investorCount: returns.individualReturns.length\n    }\n  };\n} else if ($('Analyze Tool Needs').item) {\n  const analysis = $('Analyze Tool Needs').item.json;\n  result = {\n    success: true,\n    workflowType: 'microinvestment-analysis',\n    result: {\n      action: 'tool_analysis_completed',\n      recommendations: analysis.toolSuggestions,\n      totalPotentialInvestment: analysis.totalPotentialInvestment\n    }\n  };\n}\n\nresult.timestamp = new Date().toISOString();\nresult.orchestratorId = $('Microinvestment Router').item.json.orchestratorId;\n\nconsole.log('Microinvestment - Final Result:', result);\n\nreturn [result];"
+      },
+      "id": "aggregate-microinvest-results",
+      "name": "Aggregate Microinvestment Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "microinvest-response",
+      "name": "Microinvestment Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 400]
+    }
+  ],
+  "connections": {
+    "Microinvestment Webhook": {
+      "main": [
+        [
+          {
+            "node": "Microinvestment Router",
+            "type":

@@ -1,0 +1,526 @@
+{
+  "name": "Mutual Aid Network Sub-Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mutual-aid",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "mutual-aid-webhook",
+      "name": "Mutual Aid Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "mutual-aid-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mutual Aid Network Logic Router\nconst request = $input.all()[0].json;\n\n// Validate mutual aid request\nif (!request.action || !request.userId) {\n  throw new Error('Mutual aid requires action and userId');\n}\n\nconst mutualAidAction = {\n  action: request.action,\n  userId: request.userId,\n  orchestratorId: request.routing?.orchestratorId || request.orchestratorId,\n  data: request.data || {},\n  timestamp: new Date().toISOString()\n};\n\n// Route different mutual aid actions\nswitch(request.action) {\n  case 'mutual_aid_request':\n    mutualAidAction.actionType = 'request_processing';\n    mutualAidAction.operation = 'process_aid_request';\n    break;\n  case 'resource_sharing':\n    mutualAidAction.actionType = 'resource_management';\n    mutualAidAction.operation = 'manage_resource_sharing';\n    break;\n  case 'skill_exchange':\n    mutualAidAction.actionType = 'skill_management';\n    mutualAidAction.operation = 'manage_skill_exchange';\n    break;\n  case 'volunteer_offer':\n    mutualAidAction.actionType = 'volunteer_management';\n    mutualAidAction.operation = 'process_volunteer_offer';\n    break;\n  case 'community_support':\n    mutualAidAction.actionType = 'community_management';\n    mutualAidAction.operation = 'process_community_support';\n    break;\n  default:\n    throw new Error(`Unknown mutual aid action: ${request.action}`);\n}\n\nconsole.log('Mutual Aid - Processing:', mutualAidAction);\n\nreturn [mutualAidAction];"
+      },
+      "id": "mutual-aid-router",
+      "name": "Mutual Aid Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "mutual_aid_logs",
+        "columns": "user_id, orchestrator_id, action_type, operation, request_data, status, created_at",
+        "additionalFields": {
+          "mode": "independently"
+        },
+        "options": {}
+      },
+      "id": "log-mutual-aid-request",
+      "name": "Log Mutual Aid Request",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 400],
+      "credentials": {
+        "postgres": {
+          "id": "mutual-aid-db-creds",
+          "name": "Mutual Aid Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "request-condition",
+              "leftValue": "={{ $json.actionType }}",
+              "rightValue": "request_processing",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-aid-request",
+      "name": "Route Aid Request",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 240]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "resource-condition",
+              "leftValue": "={{ $json.actionType }}",
+              "rightValue": "resource_management",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-resource-sharing",
+      "name": "Route Resource Sharing",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 360]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skill-condition",
+              "leftValue": "={{ $json.actionType }}",
+              "rightValue": "skill_management",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-skill-exchange",
+      "name": "Route Skill Exchange",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "volunteer-condition",
+              "leftValue": "={{ $json.actionType }}",
+              "rightValue": "volunteer_management",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-volunteer",
+      "name": "Route Volunteer Management",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process mutual aid request\nconst request = $input.all()[0].json;\nconst data = request.data;\n\n// Validate aid request data\nif (!data.request_type || !data.description) {\n  throw new Error('Aid request requires request_type and description');\n}\n\n// Structure the aid request\nconst aidRequest = {\n  requestId: 'AID-' + Date.now(),\n  requesterId: request.userId,\n  requestType: data.request_type, // 'supplies', 'labor', 'tools', 'transport', 'knowledge'\n  title: data.title || data.request_type + ' needed',\n  description: data.description,\n  urgency: data.urgency || 'medium', // 'low', 'medium', 'high', 'critical'\n  location: data.location || '',\n  estimatedValue: data.estimated_value || 0,\n  timeframe: data.timeframe || 'flexible',\n  skillsNeeded: data.skills_needed || [],\n  status: 'open',\n  createdAt: new Date().toISOString(),\n  expiresAt: data.expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days default\n};\n\n// Calculate priority score based on urgency and community impact\nlet priorityScore = 50; // base score\nswitch(aidRequest.urgency) {\n  case 'critical': priorityScore += 40; break;\n  case 'high': priorityScore += 25; break;\n  case 'medium': priorityScore += 10; break;\n  case 'low': priorityScore += 0; break;\n}\n\n// Boost priority for essential farming needs\nif (aidRequest.requestType.includes('seeds') || aidRequest.requestType.includes('water') || aidRequest.requestType.includes('soil')) {\n  priorityScore += 15;\n}\n\naidRequest.priorityScore = Math.min(priorityScore, 100);\n\nconsole.log('Aid Request:', aidRequest);\n\nreturn [aidRequest];"
+      },
+      "id": "process-aid-request",
+      "name": "Process Aid Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 240]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "mutual_aid_requests",
+        "columns": "request_id, requester_id, request_type, title, description, urgency, location, estimated_value, timeframe, skills_needed, priority_score, status, created_at, expires_at",
+        "additionalFields": {
+          "mode": "independently"
+        },
+        "options": {}
+      },
+      "id": "save-aid-request",
+      "name": "Save Aid Request",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 240],
+      "credentials": {
+        "postgres": {
+          "id": "mutual-aid-db-creds",
+          "name": "Mutual Aid Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM community_members WHERE skills @> '[\"{{ $('Process Aid Request').item.json.requestType }}\"]' AND status = 'active' AND location_radius <= 50 ORDER BY reputation_score DESC LIMIT 10",
+        "options": {}
+      },
+      "id": "find-matching-helpers",
+      "name": "Find Matching Helpers",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1560, 240],
+      "credentials": {
+        "postgres": {
+          "id": "mutual-aid-db-creds",
+          "name": "Mutual Aid Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process resource sharing\nconst request = $input.all()[0].json;\nconst data = request.data;\n\n// Validate resource sharing data\nif (!data.resource_type || !data.availability) {\n  throw new Error('Resource sharing requires resource_type and availability');\n}\n\nconst resourceShare = {\n  shareId: 'SHARE-' + Date.now(),\n  providerId: request.userId,\n  resourceType: data.resource_type, // 'tools', 'equipment', 'space', 'transport', 'knowledge'\n  resourceName: data.resource_name || data.resource_type,\n  description: data.description || '',\n  availability: data.availability, // 'available', 'busy', 'scheduled'\n  availabilitySchedule: data.availability_schedule || {},\n  location: data.location || '',\n  condition: data.condition || 'good', // 'excellent', 'good', 'fair', 'needs_repair'\n  shareType: data.share_type || 'lend', // 'lend', 'gift', 'trade', 'rent'\n  costPerDay: data.cost_per_day || 0,\n  maxLoanDays: data.max_loan_days || 7,\n  requirements: data.requirements || [], // deposit, insurance, experience level\n  status: 'available',\n  createdAt: new Date().toISOString()\n};\n\n// Calculate resource value for tracking\nconst baseValues = {\n  'tools': 100,\n  'equipment': 500,\n  'space': 50,\n  'transport': 200,\n  'knowledge': 25\n};\nresourceShare.estimatedValue = baseValues[resourceShare.resourceType] || 50;\n\nconsole.log('Resource Share:', resourceShare);\n\nreturn [resourceShare];"
+      },
+      "id": "process-resource-sharing",
+      "name": "Process Resource Sharing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 360]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "resource_shares",
+        "columns": "share_id, provider_id, resource_type, resource_name, description, availability, location, condition, share_type, cost_per_day, max_loan_days, estimated_value, status, created_at",
+        "additionalFields": {
+          "mode": "independently"
+        },
+        "options": {}
+      },
+      "id": "save-resource-share",
+      "name": "Save Resource Share",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 360],
+      "credentials": {
+        "postgres": {
+          "id": "mutual-aid-db-creds",
+          "name": "Mutual Aid Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process skill exchange\nconst request = $input.all()[0].json;\nconst data = request.data;\n\n// Validate skill exchange data\nif (!data.offered_skill || !data.wanted_skill) {\n  throw new Error('Skill exchange requires offered_skill and wanted_skill');\n}\n\nconst skillExchange = {\n  exchangeId: 'SKILL-' + Date.now(),\n  memberId: request.userId,\n  offeredSkill: data.offered_skill,\n  offeredSkillLevel: data.offered_skill_level || 'intermediate', // 'beginner', 'intermediate', 'advanced', 'expert'\n  offeredDescription: data.offered_description || '',\n  wantedSkill: data.wanted_skill,\n  wantedSkillLevel: data.wanted_skill_level || 'any',\n  wantedDescription: data.wanted_description || '',\n  exchangeType: data.exchange_type || 'time_for_time', // 'time_for_time', 'lesson_for_lesson', 'project_based'\n  timeCommitment: data.time_commitment || '2 hours/week',\n  location: data.location || 'flexible',\n  availability: data.availability || {},\n  status: 'seeking_match',\n  createdAt: new Date().toISOString(),\n  expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString() // 60 days\n};\n\n// Calculate skill match score for future matching\nskillExchange.skillTags = {\n  offered: skillExchange.offeredSkill.toLowerCase().split(' '),\n  wanted: skillExchange.wantedSkill.toLowerCase().split(' ')\n};\n\nconsole.log('Skill Exchange:', skillExchange);\n\nreturn [skillExchange];"
+      },
+      "id": "process-skill-exchange",
+      "name": "Process Skill Exchange",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 480]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "skill_exchanges",
+        "columns": "exchange_id, member_id, offered_skill, offered_skill_level, wanted_skill, wanted_skill_level, exchange_type, time_commitment, location, status, created_at, expires_at",
+        "additionalFields": {
+          "mode": "independently"
+        },
+        "options": {}
+      },
+      "id": "save-skill-exchange",
+      "name": "Save Skill Exchange",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 480],
+      "credentials": {
+        "postgres": {
+          "id": "mutual-aid-db-creds",
+          "name": "Mutual Aid Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM skill_exchanges WHERE wanted_skill ILIKE '%{{ $('Process Skill Exchange').item.json.offeredSkill }}%' AND offered_skill ILIKE '%{{ $('Process Skill Exchange').item.json.wantedSkill }}%' AND status = 'seeking_match' AND member_id != '{{ $('Process Skill Exchange').item.json.memberId }}' LIMIT 5",
+        "options": {}
+      },
+      "id": "find-skill-matches",
+      "name": "Find Skill Matches",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1560, 480],
+      "credentials": {
+        "postgres": {
+          "id": "mutual-aid-db-creds",
+          "name": "Mutual Aid Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process volunteer offer\nconst request = $input.all()[0].json;\nconst data = request.data;\n\n// Validate volunteer data\nif (!data.volunteer_type || !data.availability) {\n  throw new Error('Volunteer offer requires volunteer_type and availability');\n}\n\nconst volunteerOffer = {\n  volunteerId: request.userId,\n  offerType: data.volunteer_type, // 'general_help', 'specialized_skill', 'transport', 'mentoring'\n  skills: data.skills || [],\n  availability: data.availability,\n  timeCommitment: data.time_commitment || '4 hours/month',\n  location: data.location || '',\n  travelRadius: data.travel_radius || 25, // miles\n  equipment: data.equipment || [], // what tools/equipment they can bring\n  experience: data.experience || 'beginner',\n  specialNotes: data.special_notes || '',\n  status: 'active',\n  createdAt: new Date().toISOString()\n};\n\n// Calculate volunteer capacity score\nlet capacityScore = 20; // base\ncapacityScore += volunteerOffer.skills.length * 5;\nif (volunteerOffer.experience === 'expert') capacityScore += 25;\nelse if (volunteerOffer.experience === 'advanced') capacityScore += 15;\nelse if (volunteerOffer.experience === 'intermediate') capacityScore += 10;\n\nvolunteerOffer.capacityScore = Math.min(capacityScore, 100);\n\nconsole.log('Volunteer Offer:', volunteerOffer);\n\nreturn [volunteerOffer];"
+      },
+      "id": "process-volunteer-offer",
+      "name": "Process Volunteer Offer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 600]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "volunteer_offers",
+        "columns": "volunteer_id, offer_type, skills, availability, time_commitment, location, travel_radius, experience, capacity_score, status, created_at",
+        "additionalFields": {
+          "mode": "independently"
+        },
+        "options": {}
+      },
+      "id": "save-volunteer-offer",
+      "name": "Save Volunteer Offer",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 600],
+      "credentials": {
+        "postgres": {
+          "id": "mutual-aid-db-creds",
+          "name": "Mutual Aid Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all mutual aid results\nconst inputs = $input.all();\nlet result = {};\n\n// Determine which path was taken and format response accordingly\nif ($('Save Aid Request').item) {\n  const aidRequest = $('Save Aid Request').item.json;\n  const helpers = $('Find Matching Helpers').items || [];\n  \n  result = {\n    success: true,\n    workflowType: 'mutual-aid-request',\n    result: {\n      action: 'aid_request_posted',\n      requestId: aidRequest.request_id,\n      requestType: aidRequest.request_type,\n      urgency: aidRequest.urgency,\n      priorityScore: aidRequest.priority_score,\n      potentialHelpers: helpers.length,\n      status: aidRequest.status\n    }\n  };\n} else if ($('Save Resource Share').item) {\n  const resourceShare = $('Save Resource Share').item.json;\n  \n  result = {\n    success: true,\n    workflowType: 'mutual-aid-resource',\n    result: {\n      action: 'resource_shared',\n      shareId: resourceShare.share_id,\n      resourceType: resourceShare.resource_type,\n      resourceName: resourceShare.resource_name,\n      shareType: resourceShare.share_type,\n      estimatedValue: resourceShare.estimated_value\n    }\n  };\n} else if ($('Save Skill Exchange').item) {\n  const skillExchange = $('Save Skill Exchange').item.json;\n  const matches = $('Find Skill Matches').items || [];\n  \n  result = {\n    success: true,\n    workflowType: 'mutual-aid-skill',\n    result: {\n      action: 'skill_exchange_posted',\n      exchangeId: skillExchange.exchange_id,\n      offeredSkill: skillExchange.offered_skill,\n      wantedSkill: skillExchange.wanted_skill,\n      potentialMatches: matches.length\n    }\n  };\n} else if ($('Save Volunteer Offer').item) {\n  const volunteerOffer = $('Save Volunteer Offer').item.json;\n  \n  result = {\n    success: true,\n    workflowType: 'mutual-aid-volunteer',\n    result: {\n      action: 'volunteer_offer_posted',\n      volunteerId: volunteerOffer.volunteer_id,\n      offerType: volunteerOffer.offer_type,\n      skills: volunteerOffer.skills,\n      capacityScore: volunteerOffer.capacity_score\n    }\n  };\n}\n\nresult.timestamp = new Date().toISOString();\nresult.orchestratorId = $('Mutual Aid Router').item.json.orchestratorId;\n\nconsole.log('Mutual Aid - Final Result:', result);\n\nreturn [result];"
+      },
+      "id": "aggregate-mutual-aid-results",
+      "name": "Aggregate Mutual Aid Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "mutual-aid-response",
+      "name": "Mutual Aid Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 400]
+    }
+  ],
+  "connections": {
+    "Mutual Aid Webhook": {
+      "main": [
+        [
+          {
+            "node": "Mutual Aid Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mutual Aid Router": {
+      "main": [
+        [
+          {
+            "node": "Log Mutual Aid Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Mutual Aid Request": {
+      "main": [
+        [
+          {
+            "node": "Route Aid Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route Resource Sharing",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route Skill Exchange",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route Volunteer Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Aid Request": {
+      "main": [
+        [
+          {
+            "node": "Process Aid Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Resource Sharing": {
+      "main": [
+        [
+          {
+            "node": "Process Resource Sharing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Skill Exchange": {
+      "main": [
+        [
+          {
+            "node": "Process Skill Exchange",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Volunteer Management": {
+      "main": [
+        [
+          {
+            "node": "Process Volunteer Offer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Aid Request": {
+      "main": [
+        [
+          {
+            "node": "Save Aid Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Aid Request": {
+      "main": [
+        [
+          {
+            "node": "Find Matching Helpers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Matching Helpers": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Mutual Aid Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Resource Sharing": {
+      "main": [
+        [
+          {
+            "node": "Save Resource Share",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Resource Share": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Mutual Aid Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Skill Exchange": {
+      "main": [
+        [
+          {
+            "node": "Save Skill Exchange",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Skill Exchange": {
+      "main": [
+        [
+          {
+            "node": "Find Skill Matches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Skill Matches": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Mutual Aid Results",
+            "type": "main",
+            "index": 0
+          }
+        ]

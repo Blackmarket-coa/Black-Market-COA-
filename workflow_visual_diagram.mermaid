@@ -1,0 +1,83 @@
+graph TB
+    %% Main Entry Point
+    API[API Gateway<br/>webhook: /collective-main] --> Router[Request Router<br/>& Logger]
+    Router --> OrchDB[(Orchestrator DB<br/>Request Logs)]
+    
+    %% Routing Logic
+    Router --> AIRoute{AI Crop<br/>Planning?}
+    Router --> MerchRoute{Merchant<br/>Trading?}
+    Router --> AidRoute{Mutual Aid<br/>Network?}
+    Router --> InvestRoute{Blockchain<br/>Microinvest?}
+    Router --> ProdRoute{Producer<br/>Management?}
+    
+    %% AI Crop Planning Workflow
+    AIRoute -->|ai_schedule<br/>crop_optimization<br/>harvest_prediction| AIWorkflow[AI Crop Planning<br/>Sub-Workflow]
+    AIWorkflow --> AIAPI[HuggingFace API<br/>Generate Recommendations]
+    AIWorkflow --> AIDB[(AI Planning DB<br/>Crop Plans & Schedules)]
+    AIWorkflow --> AIInvest[Check Tool Investment<br/>Opportunities]
+    
+    %% Blockchain Microinvestment Workflow
+    InvestRoute -->|wishlist_add<br/>microinvest<br/>investment_return| InvestWorkflow[Blockchain Microinvestment<br/>Sub-Workflow]
+    InvestWorkflow --> Wishlist[Process Wishlist<br/>Addition]
+    InvestWorkflow --> Investment[Process Investment<br/>& Blockchain TX]
+    InvestWorkflow --> Returns[Calculate Proportional<br/>Returns]
+    InvestWorkflow --> Analysis[Analyze Tool Needs<br/>for Producers]
+    InvestWorkflow --> InvestDB[(Microinvestment DB<br/>Wishlist, Investments, Returns)]
+    InvestWorkflow --> Blockchain[Blockchain Network<br/>Token Transactions]
+    
+    %% Mutual Aid Network Workflow
+    AidRoute -->|mutual_aid_request<br/>resource_sharing<br/>skill_exchange| AidWorkflow[Mutual Aid Network<br/>Sub-Workflow]
+    AidWorkflow --> AidRequest[Process Aid<br/>Requests]
+    AidWorkflow --> Resources[Resource<br/>Sharing]
+    AidWorkflow --> Skills[Skill Exchange<br/>Matching]
+    AidWorkflow --> Volunteer[Volunteer<br/>Coordination]
+    AidWorkflow --> AidDB[(Mutual Aid DB<br/>Resources, Skills, Volunteers)]
+    
+    %% Merchant Trading Workflow
+    MerchRoute -->|merchant_purchase<br/>fee_payment<br/>bulk_order| MerchWorkflow[Merchant Trading<br/>Sub-Workflow]
+    MerchWorkflow --> Purchase[Process Purchase<br/>& Tiered Discounts]
+    MerchWorkflow --> Fees[Process Fee<br/>Payments]
+    MerchWorkflow --> Bulk[Process Bulk Orders<br/>& Volume Discounts]
+    MerchWorkflow --> MerchDB[(Merchant Trading DB<br/>Orders, Payments, Merchants)]
+    MerchWorkflow --> Payment[Blockchain<br/>Payment Processing]
+    
+    %% Producer Management Workflow
+    ProdRoute -->|producer_register<br/>production_report<br/>yield_analysis| ProdWorkflow[Producer Management<br/>Sub-Workflow]
+    ProdWorkflow --> Register[Producer<br/>Registration]
+    ProdWorkflow --> Reports[Production<br/>Reports]
+    ProdWorkflow --> Analytics[Yield Analysis<br/>& Metrics]
+    ProdWorkflow --> ProdDB[(Producer Management DB<br/>Profiles, Reports, Analytics)]
+    ProdWorkflow --> TriggerReturns[Trigger Investment<br/>Returns on Yield]
+    
+    %% Cross-workflow connections
+    TriggerReturns -.->|investment_return| InvestWorkflow
+    AIInvest -.->|check_tool_needs| InvestWorkflow
+    
+    %% Response Aggregation
+    AIWorkflow --> Aggregator[Response<br/>Aggregator]
+    InvestWorkflow --> Aggregator
+    AidWorkflow --> Aggregator
+    MerchWorkflow --> Aggregator
+    ProdWorkflow --> Aggregator
+    
+    Aggregator --> FinalResponse[Final API<br/>Response]
+    
+    %% External Services
+    AIAPI --> HuggingFace[HuggingFace<br/>AI Models]
+    Blockchain --> Polygon[Polygon Network<br/>Token Contracts]
+    
+    %% Notifications
+    AIWorkflow --> Discord[Discord<br/>Notifications]
+    AidWorkflow --> Telegram[Telegram<br/>Alerts]
+    MerchWorkflow --> Email[Email<br/>Confirmations]
+    
+    %% Styling
+    classDef workflow fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef database fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef external fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef blockchain fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    
+    class AIWorkflow,InvestWorkflow,AidWorkflow,MerchWorkflow,ProdWorkflow workflow
+    class OrchDB,AIDB,InvestDB,AidDB,MerchDB,ProdDB database
+    class HuggingFace,Discord,Telegram,Email external
+    class Blockchain,Polygon blockchain

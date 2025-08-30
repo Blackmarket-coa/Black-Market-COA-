@@ -1,0 +1,579 @@
+{
+  "name": "Producer Management Sub-Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "producer-mgmt",
+        "responseMode": "responseNode",
+        "options": {}
+    },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-01T00:00:00.000Z",
+  "versionId": "1"
+},
+      "id": "producer-mgmt-webhook",
+      "name": "Producer Management Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "producer-mgmt-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $input.all()[0].json;\n\nif (!request.action || !request.userId) {\n  throw new Error('Producer management requires action and userId');\n}\n\nconst producerAction = {\n  action: request.action,\n  userId: request.userId,\n  orchestratorId: request.routing ? request.routing.orchestratorId : request.orchestratorId,\n  data: request.data || {},\n  timestamp: new Date().toISOString()\n};\n\nswitch(request.action) {\n  case 'producer_register':\n    producerAction.actionType = 'registration_processing';\n    producerAction.operation = 'register_producer';\n    break;\n  case 'producer_update':\n    producerAction.actionType = 'profile_management';\n    producerAction.operation = 'update_producer_profile';\n    break;\n  case 'production_report':\n    producerAction.actionType = 'production_tracking';\n    producerAction.operation = 'record_production';\n    break;\n  case 'yield_analysis':\n    producerAction.actionType = 'analysis_processing';\n    producerAction.operation = 'analyze_yield_performance';\n    break;\n  case 'certification_request':\n    producerAction.actionType = 'certification_processing';\n    producerAction.operation = 'process_certification';\n    break;\n  default:\n    throw new Error('Unknown producer action: ' + request.action);\n}\n\nconsole.log('Producer Management - Processing:', producerAction);\n\nreturn [producerAction];"
+      },
+      "id": "producer-mgmt-router",
+      "name": "Producer Management Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "producer_management_logs",
+        "columns": "user_id, orchestrator_id, action_type, operation, request_data, status, created_at",
+        "additionalFields": {},
+        "options": {}
+      },
+      "id": "log-producer-request",
+      "name": "Log Producer Request",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 400],
+      "credentials": {
+        "postgres": {
+          "id": "producer-mgmt-db-creds",
+          "name": "Producer Management Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "registration-condition",
+              "leftValue": "={{ $json.actionType }}",
+              "rightValue": "registration_processing",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-registration",
+      "name": "Route Registration",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 240]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "profile-condition",
+              "leftValue": "={{ $json.actionType }}",
+              "rightValue": "profile_management",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-profile-update",
+      "name": "Route Profile Update",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 360]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "production-condition",
+              "leftValue": "={{ $json.actionType }}",
+              "rightValue": "production_tracking",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-production-tracking",
+      "name": "Route Production Tracking",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "analysis-condition",
+              "leftValue": "={{ $json.actionType }}",
+              "rightValue": "analysis_processing",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-yield-analysis",
+      "name": "Route Yield Analysis",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $input.all()[0].json;\nconst data = request.data;\n\nif (!data.producer_name || !data.location || !data.farm_size) {\n  throw new Error('Producer registration requires producer_name, location, and farm_size');\n}\n\nconst producerRegistration = {\n  producerId: 'PROD-' + Date.now(),\n  userId: request.userId,\n  producerName: data.producer_name,\n  farmName: data.farm_name || data.producer_name + ' Farm',\n  location: data.location,\n  coordinates: data.coordinates || null,\n  farmSize: parseFloat(data.farm_size),\n  farmType: data.farm_type || 'mixed',\n  primaryCrops: data.primary_crops || [],\n  organicCertified: data.organic_certified || false,\n  farmingMethods: data.farming_methods || ['conventional'],\n  yearsExperience: parseInt(data.years_experience) || 0,\n  seasonalCapacity: data.seasonal_capacity || {},\n  equipment: data.equipment || [],\n  irrigationSystems: data.irrigation_systems || [],\n  certifications: data.certifications || [],\n  contactInfo: {\n    email: data.email || '',\n    phone: data.phone || '',\n    preferredContact: data.preferred_contact || 'email'\n  },\n  marketingChannels: data.marketing_channels || [],\n  status: 'pending_verification',\n  registrationDate: new Date().toISOString()\n};\n\nlet capacityScore = 20;\ncapacityScore += Math.min(producerRegistration.farmSize * 2, 30);\ncapacityScore += Math.min(producerRegistration.yearsExperience * 2, 20);\ncapacityScore += producerRegistration.primaryCrops.length * 3;\nif (producerRegistration.organicCertified) capacityScore += 10;\ncapacityScore += producerRegistration.equipment.length * 2;\n\nproducerRegistration.capacityScore = Math.min(capacityScore, 100);\n\nif (producerRegistration.capacityScore >= 80) producerRegistration.tier = 'enterprise';\nelse if (producerRegistration.capacityScore >= 60) producerRegistration.tier = 'commercial';\nelse if (producerRegistration.capacityScore >= 40) producerRegistration.tier = 'small_scale';\nelse producerRegistration.tier = 'hobbyist';\n\nconsole.log('Producer Registration:', producerRegistration);\n\nreturn [producerRegistration];"
+      },
+      "id": "process-registration",
+      "name": "Process Producer Registration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 240]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "producers",
+        "columns": "producer_id, user_id, producer_name, farm_name, location, farm_size, farm_type, primary_crops, organic_certified, farming_methods, years_experience, equipment, certifications, contact_info, capacity_score, tier, status, registration_date",
+        "additionalFields": {},
+        "options": {}
+      },
+      "id": "save-producer-registration",
+      "name": "Save Producer Registration",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 240],
+      "credentials": {
+        "postgres": {
+          "id": "producer-mgmt-db-creds",
+          "name": "Producer Management Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://n8n.collective.local/webhook/microinvestment",
+        "options": {
+          "headers": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Source-Workflow",
+                "value": "producer-management"
+              }
+            ]
+          },
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"action\": \"check_tool_needs\",\n  \"role\": \"system\",\n  \"userId\": \"{{ $json.userId }}\",\n  \"data\": {\n    \"producer_id\": \"{{ $json.producerId }}\",\n    \"farm_size\": {{ $json.farmSize }},\n    \"farm_type\": \"{{ $json.farmType }}\",\n    \"equipment\": {{ JSON.stringify($json.equipment) }},\n    \"capacity_score\": {{ $json.capacityScore }},\n    \"check_type\": \"new_producer_analysis\"\n  }\n}"
+      },
+      "id": "check-producer-investment-needs",
+      "name": "Check Producer Investment Needs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $input.all()[0].json;\nconst data = request.data;\n\nif (!data.producer_id) {\n  throw new Error('Producer update requires producer_id');\n}\n\nconst profileUpdate = {\n  producerId: data.producer_id,\n  userId: request.userId,\n  updateFields: {},\n  updateType: data.update_type || 'general',\n  updatedAt: new Date().toISOString()\n};\n\nconst allowedFields = [\n  'producer_name', 'farm_name', 'location', 'farm_size', 'farm_type',\n  'primary_crops', 'organic_certified', 'farming_methods', 'equipment',\n  'irrigation_systems', 'certifications', 'contact_info', 'marketing_channels',\n  'seasonal_capacity'\n];\n\nallowedFields.forEach(function(field) {\n  if (data[field] !== undefined) {\n    profileUpdate.updateFields[field] = data[field];\n  }\n});\n\nconst significantChanges = [\n  'farm_size', 'equipment', 'organic_certified', 'primary_crops'\n];\nconst hasSignificantChanges = significantChanges.some(function(field) {\n  return profileUpdate.updateFields.hasOwnProperty(field);\n});\n\nprofileUpdate.requiresCapacityRecalculation = hasSignificantChanges;\n\nconsole.log('Profile Update:', profileUpdate);\n\nreturn [profileUpdate];"
+      },
+      "id": "process-profile-update",
+      "name": "Process Profile Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 360]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE producers SET updated_at = NOW() WHERE producer_id = '{{ $json.producerId }}' AND user_id = '{{ $json.userId }}' RETURNING *",
+        "options": {}
+      },
+      "id": "update-producer-profile",
+      "name": "Update Producer Profile",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 360],
+      "credentials": {
+        "postgres": {
+          "id": "producer-mgmt-db-creds",
+          "name": "Producer Management Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $input.all()[0].json;\nconst data = request.data;\n\nif (!data.crop_type || !data.harvest_amount) {\n  throw new Error('Production report requires crop_type and harvest_amount');\n}\n\nconst productionReport = {\n  reportId: 'REPORT-' + Date.now(),\n  producerId: data.producer_id || request.userId,\n  cropType: data.crop_type,\n  harvestAmount: parseFloat(data.harvest_amount),\n  harvestUnit: data.harvest_unit || 'lbs',\n  harvestDate: data.harvest_date || new Date().toISOString().split('T')[0],\n  plotSize: parseFloat(data.plot_size) || 0,\n  plantingDate: data.planting_date || null,\n  growingMethods: data.growing_methods || [],\n  fertilizerUsed: data.fertilizer_used || [],\n  pestManagement: data.pest_management || [],\n  irrigationMethod: data.irrigation_method || 'unknown',\n  weatherConditions: data.weather_conditions || {},\n  qualityGrade: data.quality_grade || 'standard',\n  marketDestination: data.market_destination || 'unknown',\n  pricePerUnit: parseFloat(data.price_per_unit) || 0,\n  totalRevenue: 0,\n  costs: {\n    seeds: parseFloat(data.seed_costs) || 0,\n    fertilizer: parseFloat(data.fertilizer_costs) || 0,\n    labor: parseFloat(data.labor_costs) || 0,\n    equipment: parseFloat(data.equipment_costs) || 0,\n    other: parseFloat(data.other_costs) || 0\n  },\n  notes: data.notes || '',\n  reportDate: new Date().toISOString()\n};\n\nproductionReport.totalRevenue = productionReport.harvestAmount * productionReport.pricePerUnit;\nconst totalCosts = Object.values(productionReport.costs).reduce(function(sum, cost) { return sum + cost; }, 0);\nproductionReport.totalCosts = totalCosts;\nproductionReport.netProfit = productionReport.totalRevenue - totalCosts;\nproductionReport.profitMargin = productionReport.totalRevenue > 0 ? \n  ((productionReport.netProfit / productionReport.totalRevenue) * 100).toFixed(2) + '%' : '0%';\n\nif (productionReport.plotSize > 0) {\n  productionReport.yieldPerSqFt = (productionReport.harvestAmount / productionReport.plotSize).toFixed(2);\n}\n\nif (productionReport.plantingDate && productionReport.harvestDate) {\n  const plantDate = new Date(productionReport.plantingDate);\n  const harvestDate = new Date(productionReport.harvestDate);\n  const daysDiff = Math.floor((harvestDate - plantDate) / (1000 * 60 * 60 * 24));\n  productionReport.growingPeriodDays = daysDiff;\n}\n\nconsole.log('Production Report:', productionReport);\n\nreturn [productionReport];"
+      },
+      "id": "process-production-report",
+      "name": "Process Production Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 480]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "production_reports",
+        "columns": "report_id, producer_id, crop_type, harvest_amount, harvest_unit, harvest_date, plot_size, planting_date, growing_methods, quality_grade, market_destination, price_per_unit, total_revenue, total_costs, net_profit, profit_margin, yield_per_sqft, growing_period_days, report_date",
+        "additionalFields": {},
+        "options": {}
+      },
+      "id": "save-production-report",
+      "name": "Save Production Report",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 480],
+      "credentials": {
+        "postgres": {
+          "id": "producer-mgmt-db-creds",
+          "name": "Producer Management Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://n8n.collective.local/webhook/microinvestment",
+        "options": {
+          "headers": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Source-Workflow",
+                "value": "producer-management"
+              }
+            ]
+          },
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"action\": \"investment_return\",\n  \"role\": \"system\",\n  \"userId\": \"{{ $json.producerId }}\",\n  \"data\": {\n    \"producer_id\": \"{{ $json.producerId }}\",\n    \"crop_type\": \"{{ $json.cropType }}\",\n    \"harvest_amount\": {{ $json.harvestAmount }},\n    \"total_revenue\": {{ $json.totalRevenue }},\n    \"net_profit\": {{ $json.netProfit }},\n    \"reporting_period\": \"harvest\",\n    \"production_increase_amount\": {{ $json.netProfit }}\n  }\n}"
+      },
+      "id": "trigger-investment-returns",
+      "name": "Trigger Investment Returns",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $input.all()[0].json;\nconst data = request.data;\n\nif (!data.producer_id) {\n  throw new Error('Yield analysis requires producer_id');\n}\n\nconst analysisRequest = {\n  producerId: data.producer_id,\n  analysisType: data.analysis_type || 'seasonal',\n  timeframe: data.timeframe || 'current_season',\n  cropFilter: data.crop_filter || null,\n  requestedBy: request.userId,\n  requestDate: new Date().toISOString()\n};\n\nconsole.log('Yield Analysis Request:', analysisRequest);\n\nreturn [analysisRequest];"
+      },
+      "id": "process-yield-analysis",
+      "name": "Process Yield Analysis Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 600]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT crop_type, AVG(harvest_amount) as avg_harvest, AVG(yield_per_sqft) as avg_yield_sqft, AVG(net_profit) as avg_profit, COUNT(*) as harvest_count FROM production_reports WHERE producer_id = '{{ $json.producerId }}' AND harvest_date >= DATE_TRUNC('year', CURRENT_DATE) GROUP BY crop_type ORDER BY avg_profit DESC",
+        "options": {}
+      },
+      "id": "calculate-yield-metrics",
+      "name": "Calculate Yield Metrics",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 600],
+      "credentials": {
+        "postgres": {
+          "id": "producer-mgmt-db-creds",
+          "name": "Producer Management Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let result = {};\n\nif ($('Save Producer Registration').item) {\n  const registration = $('Save Producer Registration').item.json;\n  const investmentCheck = $('Check Producer Investment Needs').item ? $('Check Producer Investment Needs').item.json : {};\n  \n  result = {\n    success: true,\n    workflowType: 'producer-management-registration',\n    result: {\n      action: 'producer_registered',\n      producerId: registration.producer_id,\n      producerName: registration.producer_name,\n      farmName: registration.farm_name,\n      tier: registration.tier,\n      capacityScore: registration.capacity_score,\n      status: registration.status,\n      investmentOpportunities: investmentCheck.success ? (investmentCheck.recommendations || []) : []\n    }\n  };\n} else if ($('Update Producer Profile').item) {\n  const update = $('Update Producer Profile').item.json;\n  \n  result = {\n    success: true,\n    workflowType: 'producer-management-update',\n    result: {\n      action: 'profile_updated',\n      producerId: update.producer_id,\n      updatedFields: Object.keys($('Process Profile Update').item.json.updateFields || {}),\n      requiresCapacityRecalculation: $('Process Profile Update').item.json.requiresCapacityRecalculation\n    }\n  };\n} else if ($('Save Production Report').item) {\n  const report = $('Save Production Report').item.json;\n  const returnsTriggered = $('Trigger Investment Returns').item ? $('Trigger Investment Returns').item.json : {};\n  \n  result = {\n    success: true,\n    workflowType: 'producer-management-report',\n    result: {\n      action: 'production_reported',\n      reportId: report.report_id,\n      cropType: report.crop_type,\n      harvestAmount: report.harvest_amount,\n      totalRevenue: report.total_revenue,\n      netProfit: report.net_profit,\n      profitMargin: report.profit_margin,\n      investmentReturnsTriggered: returnsTriggered.success || false\n    }\n  };\n} else if ($('Calculate Yield Metrics').items) {\n  const metrics = $('Calculate Yield Metrics').items || [];\n  \n  result = {\n    success: true,\n    workflowType: 'producer-management-analysis',\n    result: {\n      action: 'yield_analysis_completed',\n      producerId: $('Process Yield Analysis Request').item.json.producerId,\n      analysisType: $('Process Yield Analysis Request').item.json.analysisType,\n      cropAnalysis: metrics.map(function(item) {\n        return {\n          cropType: item.json.crop_type,\n          averageHarvest: parseFloat(item.json.avg_harvest || 0).toFixed(2),\n          averageYieldPerSqFt: parseFloat(item.json.avg_yield_sqft || 0).toFixed(2),\n          averageProfit: parseFloat(item.json.avg_profit || 0).toFixed(2),\n          harvestCount: item.json.harvest_count || 0\n        };\n      }),\n      totalCropsAnalyzed: metrics.length\n    }\n  };\n} else {\n  result = {\n    success: false,\n    workflowType: 'producer-management-unknown',\n    result: {\n      action: 'unknown_path',\n      message: 'No valid workflow path was executed'\n    }\n  };\n}\n\nresult.timestamp = new Date().toISOString();\nresult.orchestratorId = $('Producer Management Router').item.json.orchestratorId;\n\nconsole.log('Producer Management - Final Result:', result);\n\nreturn [result];"
+      },
+      "id": "aggregate-producer-results",
+      "name": "Aggregate Producer Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "producer-mgmt-response",
+      "name": "Producer Management Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 400]
+    }
+  ],
+  "connections": {
+    "Producer Management Webhook": {
+      "main": [
+        [
+          {
+            "node": "Producer Management Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Producer Management Router": {
+      "main": [
+        [
+          {
+            "node": "Log Producer Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Producer Request": {
+      "main": [
+        [
+          {
+            "node": "Route Registration",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route Profile Update",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route Production Tracking",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route Yield Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Registration": {
+      "main": [
+        [
+          {
+            "node": "Process Producer Registration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Profile Update": {
+      "main": [
+        [
+          {
+            "node": "Process Profile Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Production Tracking": {
+      "main": [
+        [
+          {
+            "node": "Process Production Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Yield Analysis": {
+      "main": [
+        [
+          {
+            "node": "Process Yield Analysis Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Producer Registration": {
+      "main": [
+        [
+          {
+            "node": "Save Producer Registration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Producer Registration": {
+      "main": [
+        [
+          {
+            "node": "Check Producer Investment Needs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Producer Investment Needs": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Producer Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Profile Update": {
+      "main": [
+        [
+          {
+            "node": "Update Producer Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Producer Profile": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Producer Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Production Report": {
+      "main": [
+        [
+          {
+            "node": "Save Production Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Production Report": {
+      "main": [
+        [
+          {
+            "node": "Trigger Investment Returns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Investment Returns": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Producer Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Yield Analysis Request": {
+      "main": [
+        [
+          {
+            "node": "Calculate Yield Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Yield Metrics": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Producer Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Producer Results": {
+      "main": [
+        [
+          {
+            "node": "Producer Management Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
