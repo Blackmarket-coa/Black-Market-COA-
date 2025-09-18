@@ -1,0 +1,543 @@
+{
+  "name": "Merchant Trading Sub-Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "merchant-trading",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "merchant-webhook",
+      "name": "Merchant Trading Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        400
+      ],
+      "webhookId": "merchant-trading-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merchant Trading Logic Router\nconst request = $input.all()[0].json;\n\n// Validate merchant request\nif (!request.action || !request.userId || !request.data) {\n  throw new Error('Merchant trading requires action, userId, and data');\n}\n\nconst merchantAction = {\n  action: request.action,\n  userId: request.userId,\n  orchestratorId: request.routing?.orchestratorId || request.orchestratorId,\n  data: request.data,\n  timestamp: new Date().toISOString()\n};\n\n// Determine merchant action type\nswitch(request.action) {\n  case 'merchant_purchase':\n    merchantAction.actionType = 'purchase_processing';\n    merchantAction.operation = 'process_purchase';\n    break;\n  case 'fee_payment':\n    merchantAction.actionType = 'fee_processing';\n    merchantAction.operation = 'process_fee';\n    break;\n  case 'bulk_order':\n    merchantAction.actionType = 'bulk_processing';\n    merchantAction.operation = 'process_bulk_order';\n    break;\n  default:\n    throw new Error(`Unknown merchant action: ${request.action}`);\n}\n\n// Validate merchant-specific data\nif (!request.data.merchant_id && !request.data.merchant_name) {\n  throw new Error('Merchant actions require merchant identification');\n}\n\nconsole.log('Merchant Trading - Processing:', merchantAction);\n\nreturn [merchantAction];"
+      },
+      "id": "merchant-router",
+      "name": "Merchant Trading Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "merchant_transactions_log",
+        "columns": "user_id, orchestrator_id, action_type, operation, merchant_id, request_data, status, created_at",
+        "additionalFields": {
+          "mode": "independently"
+        },
+        "options": {}
+      },
+      "id": "log-merchant-request",
+      "name": "Log Merchant Request",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        680,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "%%CREDENTIAL_POSTGRES_ID%%",
+          "name": "Local Postgres DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM merchants WHERE user_id = '{{ $json.userId }}' OR merchant_id = '{{ $json.data.merchant_id }}' LIMIT 1",
+        "options": {}
+      },
+      "id": "validate-merchant",
+      "name": "Validate Merchant",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        900,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "%%CREDENTIAL_POSTGRES_ID%%",
+          "name": "Local Postgres DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "purchase-condition",
+              "leftValue": "={{ $('Merchant Trading Router').item.json.actionType }}",
+              "rightValue": "purchase_processing",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-purchase",
+      "name": "Route Purchase Processing",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "fee-condition",
+              "leftValue": "={{ $('Merchant Trading Router').item.json.actionType }}",
+              "rightValue": "fee_processing",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-fee",
+      "name": "Route Fee Processing",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "bulk-condition",
+              "leftValue": "={{ $('Merchant Trading Router').item.json.actionType }}",
+              "rightValue": "bulk_processing",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "route-bulk",
+      "name": "Route Bulk Processing",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process merchant purchase\nconst merchantData = $('Validate Merchant').item.json;\nconst requestData = $('Merchant Trading Router').item.json;\nconst purchaseData = requestData.data;\n\n// Validate purchase data\nif (!purchaseData.products || !Array.isArray(purchaseData.products) || purchaseData.products.length === 0) {\n  throw new Error('Purchase requires products array');\n}\n\n// Calculate totals and fees\nlet subtotal = 0;\npurchaseData.products.forEach(product => {\n  const price = parseFloat(product.price_per_unit || 0);\n  const quantity = parseFloat(product.quantity || 0);\n  subtotal += price * quantity;\n});\n\n// Apply merchant discount based on tier\nconst merchantTier = merchantData.tier || 'standard';\nlet discountRate = 0;\nswitch(merchantTier) {\n  case 'premium': discountRate = 0.15; break;\n  case 'gold': discountRate = 0.10; break;\n  case 'silver': discountRate = 0.05; break;\n  default: discountRate = 0;\n}\n\nconst discountAmount = subtotal * discountRate;\nconst afterDiscount = subtotal - discountAmount;\n\n// Calculate platform fee (2% of discounted total)\nconst platformFee = afterDiscount * 0.02;\nconst finalTotal = afterDiscount + platformFee;\n\nconst processedPurchase = {\n  orderId: 'ORD-' + Date.now(),\n  merchantId: merchantData.merchant_id || merchantData.id,\n  merchantName: merchantData.merchant_name || merchantData.name,\n  merchantTier,\n  products: purchaseData.products,\n  subtotal: subtotal.toFixed(2),\n  discountRate: (discountRate * 100).toFixed(1) + '%',\n  discountAmount: discountAmount.toFixed(2),\n  platformFee: platformFee.toFixed(2),\n  finalTotal: finalTotal.toFixed(2),\n  paymentMethod: purchaseData.payment_method || 'blockchain',\n  walletAddress: purchaseData.wallet_address,\n  tokenType: purchaseData.token_type || 'COLLECTIVE',\n  status: 'processing',\n  createdAt: new Date().toISOString()\n};\n\nconsole.log('Processed Purchase:', processedPurchase);\n\nreturn [processedPurchase];"
+      },
+      "id": "process-purchase",
+      "name": "Process Purchase",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.polygon.io/v1/payments",
+        "options": {
+          "headers": {
+            "entries": [
+              {
+                "name": "Authorization",
+                "value": "Bearer POLYGON_API_KEY_PLACEHOLDER"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"from\": \"{{ $json.walletAddress }}\",\n  \"to\": \"0xCOLLECTIVE_MERCHANT_WALLET_PLACEHOLDER\",\n  \"amount\": \"{{ $json.finalTotal }}\",\n  \"token\": \"{{ $json.tokenType }}\",\n  \"memo\": \"Purchase payment for order {{ $json.orderId }}\",\n  \"merchant_id\": \"{{ $json.merchantId }}\"\n}"
+      },
+      "id": "process-purchase-payment",
+      "name": "Process Purchase Payment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process merchant fee payment\nconst merchantData = $('Validate Merchant').item.json;\nconst requestData = $('Merchant Trading Router').item.json;\nconst feeData = requestData.data;\n\n// Validate fee data\nif (!feeData.fee_amount || !feeData.fee_type) {\n  throw new Error('Fee processing requires fee_amount and fee_type');\n}\n\nconst processedFee = {\n  feeId: 'FEE-' + Date.now(),\n  merchantId: merchantData.merchant_id || merchantData.id,\n  merchantName: merchantData.merchant_name || merchantData.name,\n  feeType: feeData.fee_type, // 'monthly_subscription', 'listing_fee', 'transaction_fee'\n  feeAmount: parseFloat(feeData.fee_amount),\n  feePeriod: feeData.fee_period || 'one_time',\n  walletAddress: feeData.wallet_address,\n  tokenType: feeData.token_type || 'COLLECTIVE',\n  dueDate: feeData.due_date || new Date().toISOString().split('T')[0],\n  status: 'processing',\n  createdAt: new Date().toISOString()\n};\n\n// Apply late fees if past due\nconst today = new Date();\nconst dueDate = new Date(processedFee.dueDate);\nif (today > dueDate) {\n  const daysPastDue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));\n  const lateFee = Math.min(processedFee.feeAmount * 0.1, 50); // 10% or $50 max\n  processedFee.lateFee = lateFee.toFixed(2);\n  processedFee.daysPastDue = daysPastDue;\n  processedFee.finalAmount = (processedFee.feeAmount + lateFee).toFixed(2);\n} else {\n  processedFee.finalAmount = processedFee.feeAmount.toFixed(2);\n}\n\nconsole.log('Processed Fee:', processedFee);\n\nreturn [processedFee];"
+      },
+      "id": "process-fee",
+      "name": "Process Fee Payment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.polygon.io/v1/payments",
+        "options": {
+          "headers": {
+            "entries": [
+              {
+                "name": "Authorization",
+                "value": "Bearer POLYGON_API_KEY_PLACEHOLDER"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"from\": \"{{ $json.walletAddress }}\",\n  \"to\": \"0xCOLLECTIVE_FEE_WALLET_PLACEHOLDER\",\n  \"amount\": \"{{ $json.finalAmount }}\",\n  \"token\": \"{{ $json.tokenType }}\",\n  \"memo\": \"{{ $json.feeType }} payment - {{ $json.feeId }}\",\n  \"merchant_id\": \"{{ $json.merchantId }}\"\n}"
+      },
+      "id": "process-fee-payment",
+      "name": "Process Fee Payment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process bulk order\nconst merchantData = $('Validate Merchant').item.json;\nconst requestData = $('Merchant Trading Router').item.json;\nconst bulkData = requestData.data;\n\n// Validate bulk order data\nif (!bulkData.bulk_items || !Array.isArray(bulkData.bulk_items) || bulkData.bulk_items.length === 0) {\n  throw new Error('Bulk order requires bulk_items array');\n}\n\n// Process bulk pricing\nlet totalQuantity = 0;\nlet totalValue = 0;\nconst processedItems = bulkData.bulk_items.map(item => {\n  const quantity = parseFloat(item.quantity || 0);\n  const unitPrice = parseFloat(item.unit_price || 0);\n  const itemTotal = quantity * unitPrice;\n  \n  totalQuantity += quantity;\n  totalValue += itemTotal;\n  \n  return {\n    ...item,\n    quantity,\n    unitPrice,\n    itemTotal: itemTotal.toFixed(2)\n  };\n});\n\n// Apply bulk discount based on volume\nlet bulkDiscountRate = 0;\nif (totalValue > 10000) bulkDiscountRate = 0.25; // 25% for >$10k\nelse if (totalValue > 5000) bulkDiscountRate = 0.20; // 20% for >$5k\nelse if (totalValue > 2000) bulkDiscountRate = 0.15; // 15% for >$2k\nelse if (totalValue > 1000) bulkDiscountRate = 0.10; // 10% for >$1k\nelse if (totalValue > 500) bulkDiscountRate = 0.05; // 5% for >$500\n\nconst bulkDiscount = totalValue * bulkDiscountRate;\nconst afterBulkDiscount = totalValue - bulkDiscount;\n\n// Platform fee for bulk orders (1.5% instead of 2%)\nconst platformFee = afterBulkDiscount * 0.015;\nconst finalTotal = afterBulkDiscount + platformFee;\n\nconst processedBulkOrder = {\n  bulkOrderId: 'BULK-' + Date.now(),\n  merchantId: merchantData.merchant_id || merchantData.id,\n  merchantName: merchantData.merchant_name || merchantData.name,\n  items: processedItems,\n  totalQuantity,\n  subtotal: totalValue.toFixed(2),\n  bulkDiscountRate: (bulkDiscountRate * 100).toFixed(1) + '%',\n  bulkDiscount: bulkDiscount.toFixed(2),\n  platformFee: platformFee.toFixed(2),\n  finalTotal: finalTotal.toFixed(2),\n  deliveryDate: bulkData.delivery_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],\n  walletAddress: bulkData.wallet_address,\n  tokenType: bulkData.token_type || 'COLLECTIVE',\n  status: 'processing',\n  createdAt: new Date().toISOString()\n};\n\nconsole.log('Processed Bulk Order:', processedBulkOrder);\n\nreturn [processedBulkOrder];"
+      },
+      "id": "process-bulk-order",
+      "name": "Process Bulk Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.polygon.io/v1/payments",
+        "options": {
+          "headers": {
+            "entries": [
+              {
+                "name": "Authorization",
+                "value": "Bearer POLYGON_API_KEY_PLACEHOLDER"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"from\": \"{{ $json.walletAddress }}\",\n  \"to\": \"0xCOLLECTIVE_BULK_WALLET_PLACEHOLDER\",\n  \"amount\": \"{{ $json.finalTotal }}\",\n  \"token\": \"{{ $json.tokenType }}\",\n  \"memo\": \"Bulk order payment - {{ $json.bulkOrderId }}\",\n  \"merchant_id\": \"{{ $json.merchantId }}\"\n}"
+      },
+      "id": "process-bulk-payment",
+      "name": "Process Bulk Payment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "merchant_orders",
+        "columns": "order_id, merchant_id, order_type, total_amount, payment_status, transaction_hash, order_data, created_at",
+        "additionalFields": {
+          "mode": "independently"
+        },
+        "options": {}
+      },
+      "id": "record-order",
+      "name": "Record Order in DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1780,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "%%CREDENTIAL_POSTGRES_ID%%",
+          "name": "Local Postgres DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate merchant trading results\nconst inputs = $input.all();\nlet result = {};\n\n// Determine which payment path was taken\nif ($('Process Purchase Payment').item) {\n  const purchase = $('Process Purchase').item.json;\n  const payment = $('Process Purchase Payment').item.json;\n  \n  result = {\n    success: true,\n    workflowType: 'merchant-trading-purchase',\n    result: {\n      action: 'purchase_processed',\n      orderId: purchase.orderId,\n      merchantName: purchase.merchantName,\n      finalTotal: purchase.finalTotal,\n      discountApplied: purchase.discountAmount,\n      transactionHash: payment.transaction_hash || payment.txHash,\n      products: purchase.products\n    }\n  };\n} else if ($('Process Fee Payment').item) {\n  const fee = $('Process Fee Payment').item.json;\n  const feeData = $('Process Fee Payment').item.json;\n  \n  result = {\n    success: true,\n    workflowType: 'merchant-trading-fee',\n    result: {\n      action: 'fee_processed',\n      feeId: $('Process Fee Payment').item.json.feeId,\n      feeType: $('Process Fee Payment').item.json.feeType,\n      finalAmount: $('Process Fee Payment').item.json.finalAmount,\n      transactionHash: fee.transaction_hash || fee.txHash\n    }\n  };\n} else if ($('Process Bulk Payment').item) {\n  const bulk = $('Process Bulk Order').item.json;\n  const payment = $('Process Bulk Payment').item.json;\n  \n  result = {\n    success: true,\n    workflowType: 'merchant-trading-bulk',\n    result: {\n      action: 'bulk_order_processed',\n      bulkOrderId: bulk.bulkOrderId,\n      totalQuantity: bulk.totalQuantity,\n      finalTotal: bulk.finalTotal,\n      bulkDiscount: bulk.bulkDiscount,\n      deliveryDate: bulk.deliveryDate,\n      transactionHash: payment.transaction_hash || payment.txHash\n    }\n  };\n}\n\nresult.timestamp = new Date().toISOString();\nresult.orchestratorId = $('Merchant Trading Router').item.json.orchestratorId;\n\nconsole.log('Merchant Trading - Final Result:', result);\n\nreturn [result];"
+      },
+      "id": "aggregate-merchant-results",
+      "name": "Aggregate Merchant Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "merchant-response",
+      "name": "Merchant Trading Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2220,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Merchant Trading Webhook": {
+      "main": [
+        [
+          {
+            "node": "Merchant Trading Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merchant Trading Router": {
+      "main": [
+        [
+          {
+            "node": "Log Merchant Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Merchant Request": {
+      "main": [
+        [
+          {
+            "node": "Validate Merchant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Merchant": {
+      "main": [
+        [
+          {
+            "node": "Route Purchase Processing",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route Fee Processing",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route Bulk Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Purchase Processing": {
+      "main": [
+        [
+          {
+            "node": "Process Purchase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Fee Processing": {
+      "main": [
+        [
+          {
+            "node": "Process Fee Payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Bulk Processing": {
+      "main": [
+        [
+          {
+            "node": "Process Bulk Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Purchase": {
+      "main": [
+        [
+          {
+            "node": "Process Purchase Payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Fee Payment": {
+      "main": [
+        [
+          {
+            "node": "Process Fee Payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Bulk Order": {
+      "main": [
+        [
+          {
+            "node": "Process Bulk Payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Purchase Payment": {
+      "main": [
+        [
+          {
+            "node": "Record Order in DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Bulk Payment": {
+      "main": [
+        [
+          {
+            "node": "Record Order in DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Order in DB": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Merchant Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Merchant Results": {
+      "main": [
+        [
+          {
+            "node": "Merchant Trading Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "id": "merchant-trading",
+      "name": "Merchant Trading"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-01T00:00:00.000Z",
+  "versionId": "1"
+}

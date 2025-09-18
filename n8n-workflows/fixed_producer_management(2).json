@@ -7,22 +7,15 @@
         "path": "producer-mgmt",
         "responseMode": "responseNode",
         "options": {}
-    },
-  "pinData": {},
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "staticData": null,
-  "tags": [],
-  "triggerCount": 1,
-  "updatedAt": "2025-01-01T00:00:00.000Z",
-  "versionId": "1"
-},
+      },
       "id": "producer-mgmt-webhook",
       "name": "Producer Management Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [240, 400],
+      "position": [
+        240,
+        400
+      ],
       "webhookId": "producer-mgmt-webhook"
     },
     {
@@ -33,7 +26,10 @@
       "name": "Producer Management Router",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 400]
+      "position": [
+        460,
+        400
+      ]
     },
     {
       "parameters": {
@@ -47,7 +43,10 @@
       "name": "Log Producer Request",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [680, 400],
+      "position": [
+        680,
+        400
+      ],
       "credentials": {
         "postgres": {
           "id": "producer-mgmt-db-creds",
@@ -81,7 +80,10 @@
       "name": "Route Registration",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [900, 240]
+      "position": [
+        900,
+        240
+      ]
     },
     {
       "parameters": {
@@ -109,7 +111,10 @@
       "name": "Route Profile Update",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [900, 360]
+      "position": [
+        900,
+        360
+      ]
     },
     {
       "parameters": {
@@ -137,7 +142,10 @@
       "name": "Route Production Tracking",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [900, 480]
+      "position": [
+        900,
+        480
+      ]
     },
     {
       "parameters": {
@@ -165,7 +173,10 @@
       "name": "Route Yield Analysis",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [900, 600]
+      "position": [
+        900,
+        600
+      ]
     },
     {
       "parameters": {
@@ -175,7 +186,10 @@
       "name": "Process Producer Registration",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 240]
+      "position": [
+        1120,
+        240
+      ]
     },
     {
       "parameters": {
@@ -189,7 +203,10 @@
       "name": "Save Producer Registration",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1340, 240],
+      "position": [
+        1340,
+        240
+      ],
       "credentials": {
         "postgres": {
           "id": "producer-mgmt-db-creds",
@@ -224,7 +241,10 @@
       "name": "Check Producer Investment Needs",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1560, 240]
+      "position": [
+        1560,
+        240
+      ]
     },
     {
       "parameters": {
@@ -234,7 +254,10 @@
       "name": "Process Profile Update",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 360]
+      "position": [
+        1120,
+        360
+      ]
     },
     {
       "parameters": {
@@ -246,7 +269,10 @@
       "name": "Update Producer Profile",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1340, 360],
+      "position": [
+        1340,
+        360
+      ],
       "credentials": {
         "postgres": {
           "id": "producer-mgmt-db-creds",
@@ -262,7 +288,10 @@
       "name": "Process Production Report",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 480]
+      "position": [
+        1120,
+        480
+      ]
     },
     {
       "parameters": {
@@ -276,7 +305,10 @@
       "name": "Save Production Report",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1340, 480],
+      "position": [
+        1340,
+        480
+      ],
       "credentials": {
         "postgres": {
           "id": "producer-mgmt-db-creds",
@@ -311,7 +343,10 @@
       "name": "Trigger Investment Returns",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1560, 480]
+      "position": [
+        1560,
+        480
+      ]
     },
     {
       "parameters": {
@@ -321,7 +356,10 @@
       "name": "Process Yield Analysis Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 600]
+      "position": [
+        1120,
+        600
+      ]
     },
     {
       "parameters": {
@@ -333,7 +371,10 @@
       "name": "Calculate Yield Metrics",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1340, 600],
+      "position": [
+        1340,
+        600
+      ],
       "credentials": {
         "postgres": {
           "id": "producer-mgmt-db-creds",
@@ -349,7 +390,10 @@
       "name": "Aggregate Producer Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1780, 400]
+      "position": [
+        1780,
+        400
+      ]
     },
     {
       "parameters": {
@@ -360,7 +404,10 @@
       "name": "Producer Management Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [2000, 400]
+      "position": [
+        2000,
+        400
+      ]
     }
   ],
   "connections": {
@@ -576,4 +623,15 @@
           }
         ]
       ]
-    }
+    },
+    "pinData": {},
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "tags": [],
+    "triggerCount": 1,
+    "updatedAt": "2025-01-01T00:00:00.000Z",
+    "versionId": "1"
+  }
+}
