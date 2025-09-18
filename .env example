@@ -1,0 +1,7 @@
+# This file is a template. Copy it to a new file named .env
+# The default values are suitable for local development.
+
+# PostgreSQL Credentials
+POSTGRES_DB=farmers_collective
+POSTGRES_USER=n8n_user
+POSTGRES_PASSWORD=mysecretpassword
