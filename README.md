@@ -3,11 +3,23 @@
 This project contains the n8n workflows and Docker configuration for the Farmers Collective orchestration layer. It is designed for local development.PrerequisitesDocker and Docker ComposeGitA command-line terminal🚀 
 ## Quickstart: First-Time Developer Setup
 Follow these steps to get a fully functional local development environment running.
-1. Clone the Repositorygit clone <your-repository-url>
+1. Clone the Repositorygit 
+```bash
+clone <your-repository-url>
 cd <repository-folder>
-2. Create Your Environment FileCopy the provided template to create your local .env file. The default values are suitable for local development.cp .env.example .env
-3. Start the ServicesThis command will download the necessary Docker images and start the n8n and PostgreSQL containers.docker-compose up -d
-4. Configure n8n (One-Time Manual Setup)The first time you start the instance, you need to configure it.
+```
+2. Create Your Environment File
+Copy the provided template to create your local .env file. The default values are suitable for local development.
+```bash
+cp .env.example .env
+```
+3. Start the Service
+This command will download the necessary Docker images and start the n8n and PostgreSQL containers.
+```bash
+docker-compose up -d
+```
+4. Configure n8n (One-Time Manual Setup)
+The first time you start the instance, you need to configure it.
   * Create Your Owner AccountOpen your web browser and navigate to http://localhost:5678.You will be prompted to create an owner account. Complete the setup form.
   * Import the Workflows
     * From the main n8n dashboard, click the "Import" button and select "Import from File". 
