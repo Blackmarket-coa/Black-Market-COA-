@@ -17,7 +17,7 @@ Follow these steps to get a fully functional local development environment. This
 First, we'll clone the repository, create the local environment file from the template, and start the n8n and database services.
 ```bash
 # Clone the repository
-git clone `https://github.com/bruce-lee-of-php/Black-Market-COA-J`
+gh repo clone bruce-lee-of-php/Black-Market-COA-J
 cd Black-Market-COA-J
 ```
 ```bash
