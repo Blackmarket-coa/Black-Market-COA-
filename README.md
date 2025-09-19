@@ -18,11 +18,14 @@ First, we'll clone the repository, create the local environment file from the te
 ```bash
 # Clone the repository
 gh repo clone bruce-lee-of-php/Black-Market-COA-J
+```
+```bash
+# cd into newly created project
 cd Black-Market-COA-J
 ```
 ```bash
 # Create the .env file from the template
-cp .env.example .env
+cp ."env example" .env
 ```
 ```bash
 # Start the services in the background
