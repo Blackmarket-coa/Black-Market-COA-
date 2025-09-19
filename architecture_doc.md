@@ -30,7 +30,6 @@ The platform utilizes a three-tiered "Hub and Spoke" model.
 2. **The Service Tier (The Cloud Hub):** The n8n workflows and PostgreSQL database you are building. This is the central nervous system for the entire network.
 3. **The Client Tier (The Spokes):** The user interfaces, primarily a simple mobile app, that farmers use to interact with the system.
 
-&lt;!-- end list --&gt;
 
 +---------------------------------+  
 | Client Tier (Spokes) |  
