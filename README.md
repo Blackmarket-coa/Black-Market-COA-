@@ -1,335 +1,68 @@
-# Decentralized Farmers Collective - n8n Automation
+# Farmers Collective - n8n Orchestrator
 
-A modular n8n workflow system for decentralized agricultural communities featuring AI crop planning, blockchain microinvestments, mutual aid networks, and producer management.
+This project contains the n8n workflows and Docker configuration for the Farmers Collective orchestration layer. It is designed for local development and collaboration.
 
-## Overview
+## Prerequisites
 
-This system provides a complete automation infrastructure for farmers' collectives, enabling:
+* [Docker](https://www.docker.com/products/docker-desktop/) and Docker Compose
+* [Git](https://git-scm.com/)
+* A command-line terminal
 
-- **AI-powered crop planning** and optimization recommendations
-- **Blockchain microinvestments** for community-funded agricultural tools
-- **Mutual aid networks** for resource sharing and skill exchange
-- **Producer management** with yield tracking and analytics
-- **Merchant trading** with tiered pricing and bulk order processing
+## 🚀 Developer Setup
 
-## Architecture
+Follow these steps to get a fully functional local development environment. This is a one-time setup process that takes about 5-10 minutes.
 
-The system uses a modular orchestrator pattern where a main workflow routes requests to specialized sub-workflows:
+### Step 1: Initial Launch
 
-```
-Main Orchestrator
-├── AI Crop Planning Sub-Workflow
-├── Blockchain Microinvestment Sub-Workflow  
-├── Mutual Aid Network Sub-Workflow
-├── Merchant Trading Sub-Workflow
-└── Producer Management Sub-Workflow
-```
-
-## Repository Structure
-
-```
-farmers-collective-n8n/
-├── README.md
-├── LICENSE
-├── .gitignore
-├── docs/
-│   ├── SETUP.md
-│   ├── DATABASE_SCHEMA.md
-│   ├── API_REFERENCE.md
-│   └── DEPLOYMENT.md
-├── workflows/
-│   ├── main-orchestrator.json
-│   ├── ai-crop-planning.json
-│   ├── blockchain-microinvestment.json
-│   ├── mutual-aid-network.json
-│   ├── merchant-trading.json
-│   └── producer-management.json
-├── database/
-│   ├── schemas/
-│   │   ├── orchestrator.sql
-│   │   ├── ai_planning.sql
-│   │   ├── microinvestment.sql
-│   │   ├── mutual_aid.sql
-│   │   ├── merchant_trading.sql
-│   │   └── producer_management.sql
-│   └── sample_data/
-│       ├── users.sql
-│       ├── producers.sql
-│       └── test_data.sql
-├── config/
-│   ├── credentials.template.json
-│   ├── environment.template.env
-│   └── variables.json
-├── examples/
-│   ├── sample_requests/
-│   │   ├── ai_scheduling.json
-│   │   ├── wishlist_creation.json
-│   │   ├── microinvestment.json
-│   │   ├── mutual_aid.json
-│   │   ├── merchant_purchase.json
-│   │   └── production_report.json
-│   └── test_workflows/
-├── scripts/
-│   ├── setup.sh
-│   ├── deploy.sh
-│   └── backup.sh
-└── tests/
-    ├── unit/
-    ├── integration/
-    └── data/
-```
-
-## Quick Start
-
-### Prerequisites
-
-- n8n instance (v1.0+)
-- PostgreSQL database
-- Node.js 18+
-- Docker (optional)
-
-### Installation
-
-1. Clone the repository:
+First, we'll clone the repository, create the local environment file from the template, and start the n8n and database services.
 ```bash
-git clone https://github.com/your-org/farmers-collective-n8n.git
-cd farmers-collective-n8n
+# Clone the repository
+gh repo clone bruce-lee-of-php/Black-Market-COA-J
 ```
-
-2. Set up environment variables:
 ```bash
-cp config/environment.template.env .env
-# Edit .env with your configuration
+# cd into newly created project
+cd Black-Market-COA-J
 ```
-
-3. Initialize the database:
 ```bash
-./scripts/setup.sh
+# Create the .env file from the template
+cp ."env example" .env
 ```
-
-4. Import workflows into n8n:
 ```bash
-# Import each workflow JSON file through n8n interface
-# Or use n8n CLI if available
-```
-
-5. Configure credentials in n8n:
-- Database connections
-- API keys (HuggingFace, blockchain providers)
-- SMTP settings
-- Discord/Telegram bot tokens
-
-## Core Features
-
-### Blockchain Microinvestment System
-
-The microinvestment system enables community members to fund productivity-enhancing tools for producers:
-
-**Wishlist Creation**
-- Producers add needed tools with cost estimates
-- System calculates ROI and payback periods
-- Community can view and fund items
-
-**Investment Processing**
-- Blockchain token transactions
-- Proportional ownership tracking
-- Automated return distribution
-
-**Return Calculation**
-- Based on reported production increases
-- Proportional distribution to investors
-- Transparent blockchain ledger
-
-### AI Crop Planning
-
-AI-powered recommendations for:
-- Planting schedules optimized for location and season
-- Crop rotation suggestions
-- Harvest timing predictions
-- Tool investment recommendations
-
-### Mutual Aid Network
-
-Community support system featuring:
-- Resource sharing (tools, equipment, space)
-- Skill exchange matching
-- Volunteer coordination
-- Aid request prioritization
-
-## Database Schema
-
-The system uses separate PostgreSQL databases for each workflow:
-
-- **Orchestrator DB**: Request routing and logging
-- **AI Planning DB**: Crop plans and recommendations
-- **Microinvestment DB**: Wishlist, investments, returns
-- **Mutual Aid DB**: Resources, skills, volunteers
-- **Merchant Trading DB**: Orders, payments, merchants
-- **Producer Management DB**: Profiles, reports, analytics
-
-See `docs/DATABASE_SCHEMA.md` for detailed schema information.
-
-## API Reference
-
-### Main Orchestrator Endpoint
-
-```
-POST https://your-n8n-instance.com/webhook/collective-main
-```
-
-**Request Format:**
-```json
-{
-  "action": "ai_schedule|merchant_purchase|mutual_aid_request|wishlist_add|producer_register",
-  "role": "grower|merchant|comrade|producer|investor",
-  "userId": "string",
-  "data": {
-    // Action-specific data
-  }
-}
-```
-
-See `docs/API_REFERENCE.md` for complete endpoint documentation.
-
-## Configuration
-
-### Environment Variables
-
-```bash
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=collective_user
-DB_PASS=your_password
-
-# APIs
-HUGGINGFACE_API_KEY=hf_your_token
-BLOCKCHAIN_API_KEY=your_blockchain_key
-COLLECTIVE_WALLET=0x...
-
-# Messaging
-DISCORD_BOT_TOKEN=your_discord_token
-TELEGRAM_BOT_TOKEN=your_telegram_token
-SMTP_HOST=smtp.gmail.com
-SMTP_USER=collective@farmersnetwork.org
-```
-
-### Credential Templates
-
-The `config/credentials.template.json` file contains templates for all required n8n credentials.
-
-## Testing
-
-### Sample Requests
-
-Use the examples in `examples/sample_requests/` to test each workflow:
-
-```bash
-# Test AI crop planning
-curl -X POST https://your-n8n-instance.com/webhook/collective-main \
-  -H "Content-Type: application/json" \
-  -d @examples/sample_requests/ai_scheduling.json
-```
-
-### Integration Tests
-
-Run the full test suite:
-```bash
-npm test
-```
-
-## Deployment
-
-### Docker Deployment
-
-```bash
+# Start the services in the background
 docker-compose up -d
 ```
+### Step 2: Manual n8n Configuration
 
-### Manual Deployment
+n8n requires the initial owner account and credentials to be created securely through its web interface.
 
-1. Set up production database
-2. Configure environment variables
-3. Import workflows to production n8n
-4. Run deployment script: `./scripts/deploy.sh`
+1.  **Create Your Owner Account:**
+    * Open your web browser and navigate to `http://localhost:5678`.
+    * You will be prompted to create an owner account. Complete the setup form.
 
-## Contributing
+2.  **Create the Database Credential:**
+    * In the left-hand menu, go to **Credentials** and click **"Add credential"**.
+    * Search for and select **"Postgres"**.
+    * Fill in the credential details. **These values must match your `.env` file exactly.**
+        * **Credential Name:** `Local Postgres DB` *(This name is for your reference).*
+        * **Host:** `postgres`
+        * **Database:** `farmers_collective`
+        * **User:** `n8n_user`
+        * **Password:** `mysecretpassword`
+        * **Port:** `5432`
+    * Click **Save**.
 
-1. Fork the repository
-2. Create a feature branch
-3. Test your changes thoroughly
-4. Submit a pull request
+3.  **Import the Workflows:**
+    * In the left-hand menu, go to **Workflows**.
+    * Click the **"Import"** button and choose **"Import from File"**.
+    * Navigate to the `n8n_workflows` directory in your project folder.
+    * Import each `.json` workflow file one by one.
+    * After importing a workflow, you may need to manually link the Postgres nodes to the `Local Postgres DB` credential you just created. Open the workflow, click on each Postgres node, and select the credential from the dropdown.
+    * **Save** each workflow after configuring it.
 
-### Development Guidelines
+**Congratulations! Your environment is now fully configured and ready for development.**
 
-- Test all workflow changes with sample data
-- Update documentation for new features
-- Follow the modular architecture pattern
-- Ensure database migrations are reversible
+## Daily Development
 
-## Blockchain Integration
-
-The system supports multiple blockchain networks:
-
-- **Ethereum mainnet/testnets**
-- **Polygon** (recommended for lower fees)
-- **Other EVM-compatible networks**
-
-Token payments and microinvestments are recorded on-chain for transparency and trust.
-
-## Community Features
-
-### Role-Based Access
-
-- **Producers**: Create wishlists, report yields, receive investments
-- **Merchants**: Purchase products, pay fees, place bulk orders  
-- **Investors**: Fund producer tools, receive proportional returns
-- **Community Members**: Share resources, exchange skills, offer aid
-
-### Governance Integration
-
-The system can be extended to include:
-- Voting mechanisms for collective decisions
-- Proposal systems for new features
-- Reputation tracking for community members
-
-## Security Considerations
-
-- All database credentials stored securely in n8n
-- API keys use environment variables
-- Blockchain transactions require wallet signatures
-- Input validation on all endpoints
-- Rate limiting on external API calls
-
-## Monitoring and Analytics
-
-Built-in tracking for:
-- Investment performance metrics
-- Producer yield improvements
-- Community engagement levels
-- System usage statistics
-
-## Roadmap
-
-- [ ] Mobile app integration
-- [ ] Advanced analytics dashboard  
-- [ ] Multi-language support
-- [ ] Integration with IoT sensors
-- [ ] Carbon credit tracking
-- [ ] Supply chain transparency features
-
-## Support
-
-For issues and questions:
-- Create GitHub issues for bugs
-- Use discussions for feature requests
-- Check documentation in `/docs`
-- Review sample requests in `/examples`
-
-## License
-
-MIT License - see LICENSE file for details.
-
----
-
-**Built for agricultural communities worldwide. Fork, adapt, and grow together.**
+* **To start your environment:** `docker-compose up -d`
+* **To stop your environment:** `docker-compose down`
+* **To completely reset the instance (deletes all data):** `docker-compose down -v`. You will need to repeat the entire setup process after running this.
