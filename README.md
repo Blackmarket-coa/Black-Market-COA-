@@ -30,6 +30,7 @@ cp ."env example" .env
 ```bash
 # Start the services in the background
 docker-compose up -d
+docker-compose up -d postgres
 ```
 ### Step 2: Manual n8n Configuration
 
@@ -40,8 +41,7 @@ n8n requires the initial owner account and credentials to be created securely th
     * You will be prompted to create an owner account. Complete the setup form.
 
 2.  **Create the Database Credential:**
-    * In the left-hand menu, go to **Credentials** and click **"Add credential"**.
-    * Search for and select **"Postgres"**.
+    * In the upper-left-hand menu, click the **+**, go to **Credential** and search for **"Postgres"**.
     * Fill in the credential details. **These values must match your `.env` file exactly.**
         * **Credential Name:** `Local Postgres DB` *(This name is for your reference).*
         * **Host:** `postgres`
@@ -52,8 +52,8 @@ n8n requires the initial owner account and credentials to be created securely th
     * Click **Save**.
 
 3.  **Import the Workflows:**
-    * In the left-hand menu, go to **Workflows**.
-    * Click the **"Import"** button and choose **"Import from File"**.
+    * In the upper-left-hand menu, click the **+**, go to **Workflow**.
+    * In the upper-right-hand menu, click the **...** symbol and choose **"Import from File"**.
     * Navigate to the `n8n_workflows` directory in your project folder.
     * Import each `.json` workflow file one by one.
     * After importing a workflow, you may need to manually link the Postgres nodes to the `Local Postgres DB` credential you just created. Open the workflow, click on each Postgres node, and select the credential from the dropdown.
@@ -63,6 +63,7 @@ n8n requires the initial owner account and credentials to be created securely th
 
 ## Daily Development
 
-* **To start your environment:** `docker-compose up -d`
+* **To start your environment:** `docker-compose up -d` & `docker-compose up -d postgres`
 * **To stop your environment:** `docker-compose down`
 * **To completely reset the instance (deletes all data):** `docker-compose down -v`. You will need to repeat the entire setup process after running this.
+* **One-time verification:** `./scripts/verify_db.sh` to verify integrity of postgres db table schema.
