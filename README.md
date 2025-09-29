@@ -32,6 +32,7 @@ cp ."env example" .env
 docker-compose up -d
 docker-compose up -d postgres
 ```
+If you get `permission denied` while attempting to run Docker, check (here)[https://linuxhandbook.com/docker-permission-denied/] (Linux)
 ### Step 2: Manual n8n Configuration
 
 n8n requires the initial owner account and credentials to be created securely through its web interface.

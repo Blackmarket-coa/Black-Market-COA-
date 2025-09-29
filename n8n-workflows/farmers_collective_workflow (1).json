@@ -8,42 +8,229 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "main-webhook-trigger",
+      "id": "e63d9534-e1e5-43bd-bf14-fdfd03e2758f",
       "name": "Main API Gateway",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [240, 400],
+      "position": [
+        -656,
+        208
+      ],
       "webhookId": "collective-main-gateway"
     },
     {
       "parameters": {
-        "jsCode": "// Main orchestrator logic - route requests to appropriate sub-workflows\nconst request = $input.all()[0].json;\n\n// Validate request structure\nif (!request.action || !request.role || !request.userId) {\n  throw new Error('Invalid request structure. Required: action, role, userId');\n}\n\n// Log the request\nconsole.log('Main Orchestrator - Processing:', {\n  action: request.action,\n  role: request.role,\n  userId: request.userId,\n  timestamp: new Date().toISOString()\n});\n\n// Determine target sub-workflow based on action type\nlet targetWorkflow = '';\nlet webhookPath = '';\n\nswitch(request.action) {\n  case 'ai_schedule':\n  case 'crop_optimization':\n  case 'harvest_prediction':\n    targetWorkflow = 'AI Crop Planning';\n    webhookPath = 'ai-crop-planning';\n    break;\n    \n  case 'merchant_purchase':\n  case 'fee_payment':\n  case 'bulk_order':\n    targetWorkflow = 'Merchant Fees & Trading';\n    webhookPath = 'merchant-trading';\n    break;\n    \n  case 'mutual_aid_request':\n  case 'resource_sharing':\n  case 'skill_exchange':\n    targetWorkflow = 'Mutual Aid Network';\n    webhookPath = 'mutual-aid';\n    break;\n    \n  case 'wishlist_add':\n  case 'microinvest':\n  case 'tool_funding':\n  case 'investment_return':\n    targetWorkflow = 'Blockchain Microinvestment';\n    webhookPath = 'microinvestment';\n    break;\n    \n  case 'producer_register':\n  case 'producer_update':\n  case 'production_report':\n    targetWorkflow = 'Producer Management';\n    webhookPath = 'producer-mgmt';\n    break;\n    \n  default:\n    throw new Error(`Unknown action: ${request.action}`);\n}\n\n// Prepare routing information\nreturn [{\n  ...request,\n  routing: {\n    targetWorkflow,\n    webhookPath,\n    orchestratorId: 'main-orch-' + Date.now()\n  }\n}];"
+        "jsCode": "// Main orchestrator logic - route requests to appropriate sub-workflows\nlet request = $input.all()[0].json;\n\n// Some n8n webhook payloads wrap the body\nif (request.body) {\n  request = request.body;\n}\n\n// Validate request structure\nif (!request.action || !request.role || !request.userId) {\n  throw new Error('Invalid request structure. Required: action, role, userId');\n}\n\n// Log the request\nconsole.log('Main Orchestrator - Processing:', {\n  action: request.action,\n  role: request.role,\n  userId: request.userId,\n  timestamp: new Date().toISOString()\n});\n\n// Determine target sub-workflow based on action type\nlet targetWorkflow = '';\nlet webhookPath = '';\n\nswitch(request.action) {\n  case 'ai_schedule':\n  case 'crop_optimization':\n  case 'harvest_prediction':\n    targetWorkflow = 'AI Crop Planning';\n    webhookPath = 'ai-crop-planning';\n    break;\n    \n  case 'merchant_purchase':\n  case 'fee_payment':\n  case 'bulk_order':\n    targetWorkflow = 'Merchant Fees & Trading';\n    webhookPath = 'merchant-trading';\n    break;\n    \n  case 'mutual_aid_request':\n  case 'resource_sharing':\n  case 'skill_exchange':\n    targetWorkflow = 'Mutual Aid Network';\n    webhookPath = 'mutual-aid';\n    break;\n    \n  case 'wishlist_add':\n  case 'microinvest':\n  case 'tool_funding':\n  case 'investment_return':\n    targetWorkflow = 'Blockchain Microinvestment';\n    webhookPath = 'microinvestment';\n    break;\n    \n  case 'producer_register':\n  case 'producer_update':\n  case 'production_report':\n    targetWorkflow = 'Producer Management';\n    webhookPath = 'producer-mgmt';\n    break;\n    \n  default:\n    throw new Error(`Unknown action: ${request.action}`);\n}\n\n// Prepare routing information\nreturn [{\n  ...request,\n  routing: {\n    targetWorkflow,\n    webhookPath,\n    orchestratorId: 'main-orch-' + Date.now()\n  }\n}];"
       },
-      "id": "orchestrator-logic",
+      "id": "686f01d6-30cf-483e-9ade-d81001473f43",
       "name": "Request Router & Logger",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 400]
+      "position": [
+        -448,
+        208
+      ]
     },
     {
       "parameters": {
-        "operation": "insert",
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
         "table": "orchestrator_logs",
-        "columns": "request_id, action, role, user_id, target_workflow, status, created_at",
-        "additionalFields": {
-          "mode": "independently"
+        "columns": {
+          "0": "r",
+          "1": "e",
+          "2": "q",
+          "3": "u",
+          "4": "e",
+          "5": "s",
+          "6": "t",
+          "7": "_",
+          "8": "i",
+          "9": "d",
+          "10": ",",
+          "11": " ",
+          "12": "a",
+          "13": "c",
+          "14": "t",
+          "15": "i",
+          "16": "o",
+          "17": "n",
+          "18": ",",
+          "19": " ",
+          "20": "r",
+          "21": "o",
+          "22": "l",
+          "23": "e",
+          "24": ",",
+          "25": " ",
+          "26": "u",
+          "27": "s",
+          "28": "e",
+          "29": "r",
+          "30": "_",
+          "31": "i",
+          "32": "d",
+          "33": ",",
+          "34": " ",
+          "35": "t",
+          "36": "a",
+          "37": "r",
+          "38": "g",
+          "39": "e",
+          "40": "t",
+          "41": "_",
+          "42": "w",
+          "43": "o",
+          "44": "r",
+          "45": "k",
+          "46": "f",
+          "47": "l",
+          "48": "o",
+          "49": "w",
+          "50": ",",
+          "51": " ",
+          "52": "s",
+          "53": "t",
+          "54": "a",
+          "55": "t",
+          "56": "u",
+          "57": "s",
+          "58": ",",
+          "59": " ",
+          "60": "c",
+          "61": "r",
+          "62": "e",
+          "63": "a",
+          "64": "t",
+          "65": "e",
+          "66": "d",
+          "67": "_",
+          "68": "a",
+          "69": "t",
+          "mappingMode": "defineBelow",
+          "value": {
+            "action": "={{ $json.action }}",
+            "role": "={{ $json.role }}",
+            "user_id": "={{ $json.userId }}",
+            "target_workflow": "={{ $json.routing.targetWorkflow }}",
+            "id": "={{ $json.userId }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "target_workflow",
+              "displayName": "target_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "response_data",
+              "displayName": "response_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "completed_at",
+              "displayName": "completed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
         "options": {}
       },
-      "id": "log-orchestrator-db",
+      "id": "165415b4-6429-475f-9465-6cf1d8f5bad5",
       "name": "Log to Orchestrator DB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [680, 400],
+      "position": [
+        -224,
+        208
+      ],
       "credentials": {
         "postgres": {
-          "id": "orchestrator-db-creds",
-          "name": "Orchestrator Database"
+          "id": "USo4ScF2tzQDAHla",
+          "name": "Local Postgres DB"
         }
       }
     },
@@ -67,13 +254,17 @@
             }
           ],
           "combinator": "and"
-        }
+        },
+        "options": {}
       },
-      "id": "route-ai-planning",
+      "id": "040b9b68-29bc-49e6-a10e-aaacf45e22d4",
       "name": "Route to AI Planning",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [900, 200]
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
@@ -95,13 +286,17 @@
             }
           ],
           "combinator": "and"
-        }
+        },
+        "options": {}
       },
-      "id": "route-merchant",
+      "id": "6644f9fd-f579-4f12-a312-f7543ca21e10",
       "name": "Route to Merchant Trading",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [900, 320]
+      "position": [
+        0,
+        128
+      ]
     },
     {
       "parameters": {
@@ -123,13 +318,17 @@
             }
           ],
           "combinator": "and"
-        }
+        },
+        "options": {}
       },
-      "id": "route-mutual-aid",
+      "id": "aeba16dd-0028-45ad-892d-5fb1f52b70fd",
       "name": "Route to Mutual Aid",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [900, 440]
+      "position": [
+        0,
+        240
+      ]
     },
     {
       "parameters": {
@@ -151,13 +350,17 @@
             }
           ],
           "combinator": "and"
-        }
+        },
+        "options": {}
       },
-      "id": "route-microinvest",
+      "id": "95812908-5733-444e-916a-5dbb1a71f2eb",
       "name": "Route to Microinvestment",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [900, 560]
+      "position": [
+        0,
+        368
+      ]
     },
     {
       "parameters": {
@@ -179,202 +382,164 @@
             }
           ],
           "combinator": "and"
-        }
+        },
+        "options": {}
       },
-      "id": "route-producer",
+      "id": "bee90f4e-1195-4c0b-adaa-2e210a2c7622",
       "name": "Route to Producer Mgmt",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [900, 680]
+      "position": [
+        0,
+        480
+      ]
     },
     {
       "parameters": {
-        "requestMethod": "POST",
         "url": "https://n8n.collective.local/webhook/ai-crop-planning",
-        "options": {
-          "headers": {
-            "entries": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "X-Orchestrator-ID",
-                "value": "={{ $json.routing.orchestratorId }}"
-              }
-            ]
-          },
-          "timeout": 30000
-        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
       },
-      "id": "call-ai-planning",
+      "id": "c1e9522b-8cd8-4f92-bcc8-9bbdc07489aa",
       "name": "Call AI Planning Workflow",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 200]
+      "position": [
+        224,
+        0
+      ]
     },
     {
       "parameters": {
-        "requestMethod": "POST",
         "url": "https://n8n.collective.local/webhook/merchant-trading",
-        "options": {
-          "headers": {
-            "entries": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "X-Orchestrator-ID",
-                "value": "={{ $json.routing.orchestratorId }}"
-              }
-            ]
-          },
-          "timeout": 30000
-        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
       },
-      "id": "call-merchant",
+      "id": "fc261508-3611-4801-945e-780bea31d27b",
       "name": "Call Merchant Trading Workflow",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 320]
+      "position": [
+        224,
+        128
+      ]
     },
     {
       "parameters": {
-        "requestMethod": "POST",
         "url": "https://n8n.collective.local/webhook/mutual-aid",
-        "options": {
-          "headers": {
-            "entries": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "X-Orchestrator-ID",
-                "value": "={{ $json.routing.orchestratorId }}"
-              }
-            ]
-          },
-          "timeout": 30000
-        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
       },
-      "id": "call-mutual-aid",
+      "id": "d739cee4-0130-4b0a-bb32-99758251cfd2",
       "name": "Call Mutual Aid Workflow",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 440]
+      "position": [
+        224,
+        240
+      ]
     },
     {
       "parameters": {
-        "requestMethod": "POST",
         "url": "https://n8n.collective.local/webhook/microinvestment",
-        "options": {
-          "headers": {
-            "entries": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "X-Orchestrator-ID",
-                "value": "={{ $json.routing.orchestratorId }}"
-              }
-            ]
-          },
-          "timeout": 30000
-        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
       },
-      "id": "call-microinvest",
+      "id": "341e6a08-a9b3-4ffc-ae67-e8ecd9be1946",
       "name": "Call Microinvestment Workflow",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 560]
+      "position": [
+        224,
+        368
+      ]
     },
     {
       "parameters": {
-        "requestMethod": "POST",
         "url": "https://n8n.collective.local/webhook/producer-mgmt",
-        "options": {
-          "headers": {
-            "entries": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "X-Orchestrator-ID",
-                "value": "={{ $json.routing.orchestratorId }}"
-              }
-            ]
-          },
-          "timeout": 30000
-        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}"
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
       },
-      "id": "call-producer",
+      "id": "fd3e3eec-12ce-483f-8fa7-55545e34f128",
       "name": "Call Producer Mgmt Workflow",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 680]
+      "position": [
+        224,
+        480
+      ]
     },
     {
       "parameters": {
         "jsCode": "// Aggregate responses from sub-workflows\nconst responses = $input.all();\nconst mainResponse = responses[0].json;\n\n// Update orchestrator log with final status\nconst finalStatus = {\n  orchestratorId: mainResponse.routing?.orchestratorId,\n  status: 'completed',\n  subWorkflowResponse: mainResponse,\n  completedAt: new Date().toISOString()\n};\n\nconsole.log('Orchestrator - Request completed:', finalStatus);\n\nreturn [{\n  success: true,\n  message: 'Request processed successfully by orchestrator',\n  orchestratorId: finalStatus.orchestratorId,\n  subWorkflowResult: mainResponse,\n  timestamp: finalStatus.completedAt\n}];"
       },
-      "id": "aggregate-responses",
+      "id": "35253eb5-28aa-4f1d-87eb-db92899927e1",
       "name": "Aggregate Sub-workflow Responses",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 400]
+      "position": [
+        448,
+        208
+      ]
     },
     {
       "parameters": {
         "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
         "table": "orchestrator_logs",
-        "updateKey": "orchestrator_id",
         "columns": "status, completed_at, response_data",
-        "additionalFields": {},
         "options": {}
       },
-      "id": "update-orchestrator-log",
+      "id": "dde230ca-10ec-4f19-a077-7820d78107c4",
       "name": "Update Orchestrator Log",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1560, 400],
-      "credentials": {
-        "postgres": {
-          "id": "orchestrator-db-creds",
-          "name": "Orchestrator Database"
-        }
-      }
+      "position": [
+        672,
+        208
+      ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ $json }}"
+        "responseBody": "={{ $json }}",
+        "options": {}
       },
-      "id": "final-response",
+      "id": "ac332526-6df7-4b91-9a63-0714fec29131",
       "name": "Return Final Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1780, 400]
+      "position": [
+        880,
+        208
+      ]
     }
   ],
+  "pinData": {},
   "connections": {
     "Main API Gateway": {
       "main": [
@@ -562,20 +727,21 @@
       ]
     }
   },
-  "pinData": {},
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "staticData": null,
+  "versionId": "ab85aaef-fe1c-480f-8765-69f1ada67ebc",
+  "meta": {
+    "instanceId": "84fc6727a04903eff2d62ea90c60fdcd208ad944733fb805b44d05824ad76592"
+  },
+  "id": "wyeK9DBXJys29TEu",
   "tags": [
     {
-      "createdAt": "2025-01-01T00:00:00.000Z",
-      "updatedAt": "2025-01-01T00:00:00.000Z",
-      "id": "main-orchestrator",
+      "createdAt": "2025-09-29T01:46:38.558Z",
+      "updatedAt": "2025-09-29T01:46:38.558Z",
+      "id": "KOpjputkMRnPSQEv",
       "name": "Main Orchestrator"
     }
-  ],
-  "triggerCount": 1,
-  "updatedAt": "2025-01-01T00:00:00.000Z",
-  "versionId": "1"
+  ]
 }
